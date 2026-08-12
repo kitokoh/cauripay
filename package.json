@@ -1,0 +1,25 @@
+{
+  "name": "cauripay",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CauriPay — agrégateur de paiement dev-first pour l'Afrique centrale et de l'Ouest (mobile money, cartes, international). MVP sandbox.",
+  "workspaces": [
+    "server",
+    "dashboard"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,dashboard -c green,cyan \"npm:dev:server\" \"npm:dev:dashboard\"",
+    "dev:server": "npm -w server run dev",
+    "dev:dashboard": "npm -w dashboard run dev",
+    "build": "npm -w server run build && npm -w dashboard run build",
+    "test": "npm -w server run test",
+    "start": "npm -w server run start"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "license": "MIT"
+}

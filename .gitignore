@@ -1,0 +1,22 @@
+# Dépendances
+node_modules/
+
+# Builds
+dist/
+build/
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+.gh-token
+
+# Base de données locale
+data/*.db
+data/*.db-*
+
+# Outils
+.claude/
+.DS_Store
+*.log
+coverage/
