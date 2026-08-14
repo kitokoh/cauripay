@@ -8,9 +8,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.goursi.ledger.domain.command.CreditCommand;
+import com.goursi.ledger.domain.command.DebitCommand;
 import com.goursi.ledger.domain.command.TransferCommand;
 import com.goursi.ledger.domain.exception.InsufficientFundsException;
+import com.goursi.ledger.domain.model.EntryType;
 import com.goursi.ledger.domain.model.LedgerBalance;
+import com.goursi.ledger.domain.model.LedgerDirection;
+import com.goursi.ledger.domain.model.LedgerEntry;
 import com.goursi.ledger.domain.result.TransferResult;
 import com.goursi.ledger.infrastructure.messaging.LedgerEventPublisher;
 import com.goursi.ledger.infrastructure.metrics.LedgerMetrics;
@@ -127,5 +132,51 @@ class LedgerWriteServiceTest {
     // aucun accès aux balances
     verify(balanceRepository, never()).findByWalletIdForUpdate(any());
     verify(entryRepository, never()).saveAll(anyList());
+  }
+
+  @Test
+  void credit_idempotent_stocke_le_resultat_et_rejoue_sans_doublon() {
+    UUID walletId = UUID.randomUUID();
+    LedgerBalance balance = new LedgerBalance(walletId, new BigDecimal("1000"));
+    when(balanceRepository.findByWalletIdForUpdate(walletId)).thenReturn(Optional.of(balance));
+
+    var response = service.credit(new CreditCommand(UUID.randomUUID(), txId, walletId,
+        new BigDecimal("500"), EntryType.PRINCIPAL, "Dépôt"));
+
+    assertThat(response.direction()).isEqualTo("CREDIT");
+    assertThat(response.balanceAfter()).isEqualByComparingTo("1500.00");
+    // le résultat est stocké pour le rejeu
+    verify(idempotencyService).storeResult(any(), any(), any());
+    verify(eventPublisher, never()).publishCompleted(any(), any(), any(), any());
+
+    // rejeu : réponse reconstruite depuis le cache, aucune écriture
+    LedgerEntry cachedEntry = LedgerEntry.create(
+        txId, walletId, LedgerDirection.CREDIT,
+        response.amount(), response.balanceBefore(), EntryType.PRINCIPAL, "Dépôt");
+    TransferResult cached = new TransferResult(txId, List.of(cachedEntry),
+        new BigDecimal("1500"), BigDecimal.ZERO, BigDecimal.ZERO);
+    when(idempotencyService.getCached(any(), any())).thenReturn(Optional.of(cached));
+
+    var replayed = service.credit(new CreditCommand(UUID.randomUUID(), txId, walletId,
+        new BigDecimal("500"), EntryType.PRINCIPAL, "Dépôt"));
+
+    assertThat(replayed.transactionId()).isEqualTo(txId);
+    assertThat(replayed.walletId()).isEqualTo(walletId);
+    assertThat(replayed.balanceAfter()).isEqualByComparingTo("1500.00");
+    verify(entryRepository, never()).saveAll(anyList());
+  }
+
+  @Test
+  void debit_idempotent_stocke_le_resultat() {
+    UUID walletId = UUID.randomUUID();
+    LedgerBalance balance = new LedgerBalance(walletId, new BigDecimal("2000"));
+    when(balanceRepository.findByWalletIdForUpdate(walletId)).thenReturn(Optional.of(balance));
+
+    var response = service.debit(new DebitCommand(UUID.randomUUID(), txId, walletId,
+        new BigDecimal("300"), EntryType.PRINCIPAL, "Retrait"));
+
+    assertThat(response.direction()).isEqualTo("DEBIT");
+    assertThat(response.balanceAfter()).isEqualByComparingTo("1700.00");
+    verify(idempotencyService).storeResult(any(), any(), any());
   }
 }

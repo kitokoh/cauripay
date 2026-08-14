@@ -152,10 +152,7 @@ public class LedgerWriteService {
     String cmdHash = idempotencyService.hash(cmd.toString());
     var cached = idempotencyService.getCached(idemKey, cmdHash);
     if (cached.isPresent()) {
-      return new LedgerEntryResponse(
-          cached.get().entryIds().get(0), cmd.transactionId(), cmd.walletId(),
-          LedgerDirection.CREDIT.name(), cmd.amount(), BigDecimal.ZERO, BigDecimal.ZERO,
-          cmd.entryType().name(), null, null);
+      return entryResponseOf(cached.get(), cmd.walletId());
     }
     IdempotencyService.Claim claim = idempotencyService.claim(idemKey, cmdHash);
     if (claim != IdempotencyService.Claim.OK) {
@@ -170,11 +167,12 @@ public class LedgerWriteService {
           cmd.amount(), before, cmd.entryType(), cmd.description() == null ? "Crédit" : cmd.description());
       entryRepository.save(entry);
       balanceRepository.save(balance);
+      idempotencyService.storeResult(idemKey, cmdHash,
+          new TransferResult(cmd.transactionId(), List.of(entry),
+              balance.getBalance(), BigDecimal.ZERO.setScale(2), BigDecimal.ZERO.setScale(2)));
       metrics.creditOk(System.nanoTime() - start);
       log.info("credit OK {} wallet {}", cmd.transactionId(), cmd.walletId());
-      return new LedgerEntryResponse(entry.getId(), entry.getTransactionId(), entry.getWalletId(),
-          entry.getDirection().name(), entry.getAmount(), entry.getBalanceBefore(),
-          entry.getBalanceAfter(), entry.getEntryType().name(), entry.getDescription(), entry.getCreatedAt());
+      return entryResponseOf(entry);
     } catch (RuntimeException e) {
       idempotencyService.release(idemKey);
       throw e;
@@ -188,10 +186,7 @@ public class LedgerWriteService {
     String cmdHash = idempotencyService.hash(cmd.toString());
     var cached = idempotencyService.getCached(idemKey, cmdHash);
     if (cached.isPresent()) {
-      return new LedgerEntryResponse(
-          cached.get().entryIds().get(0), cmd.transactionId(), cmd.walletId(),
-          LedgerDirection.DEBIT.name(), cmd.amount(), BigDecimal.ZERO, BigDecimal.ZERO,
-          cmd.entryType().name(), null, null);
+      return entryResponseOf(cached.get(), cmd.walletId());
     }
     IdempotencyService.Claim claim = idempotencyService.claim(idemKey, cmdHash);
     if (claim != IdempotencyService.Claim.OK) {
@@ -205,15 +200,32 @@ public class LedgerWriteService {
           cmd.amount(), before, cmd.entryType(), cmd.description() == null ? "Débit" : cmd.description());
       entryRepository.save(entry);
       balanceRepository.save(balance);
+      idempotencyService.storeResult(idemKey, cmdHash,
+          new TransferResult(cmd.transactionId(), List.of(entry),
+              balance.getBalance(), BigDecimal.ZERO.setScale(2), BigDecimal.ZERO.setScale(2)));
       metrics.debitOk(System.nanoTime() - start);
       log.info("debit OK {} wallet {}", cmd.transactionId(), cmd.walletId());
-      return new LedgerEntryResponse(entry.getId(), entry.getTransactionId(), entry.getWalletId(),
-          entry.getDirection().name(), entry.getAmount(), entry.getBalanceBefore(),
-          entry.getBalanceAfter(), entry.getEntryType().name(), entry.getDescription(), entry.getCreatedAt());
+      return entryResponseOf(entry);
     } catch (RuntimeException e) {
       idempotencyService.release(idemKey);
       throw e;
     }
+  }
+
+  /** Projection d'une écriture pour la réponse API. */
+  private LedgerEntryResponse entryResponseOf(LedgerEntry entry) {
+    return new LedgerEntryResponse(entry.getId(), entry.getTransactionId(), entry.getWalletId(),
+        entry.getDirection().name(), entry.getAmount(), entry.getBalanceBefore(),
+        entry.getBalanceAfter(), entry.getEntryType().name(), entry.getDescription(), entry.getCreatedAt());
+  }
+
+  /** Reconstruit la réponse depuis le résultat en cache (rejeu idempotent). */
+  private LedgerEntryResponse entryResponseOf(TransferResult cached, UUID walletId) {
+    return cached.entries().stream()
+        .filter(e -> e.getWalletId().equals(walletId))
+        .findFirst()
+        .map(this::entryResponseOf)
+        .orElseThrow(() -> new IdempotencyConflictException("résultat en cache sans écriture pour " + walletId));
   }
 
   // ── Reversal (écritures miroir) ──────────────────────────────────────────────
