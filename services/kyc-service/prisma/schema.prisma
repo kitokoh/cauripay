@@ -1,0 +1,43 @@
+// GOURSI — schéma Prisma kyc-service (ADR-001 : service dédié, propre DB).
+// Les documents sont chiffrés AES-256-GCM (documentEnc / selfieEnc) — jamais en clair.
+// Output DÉDIÉ : en monorepo npm workspaces, chaque service génère son propre
+// client Prisma (évite qu'un prisma generate écrase celui d'un autre service).
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/kyc"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum KycLevel {
+  BASIC
+  VERIFIED
+  PREMIUM
+}
+
+enum KycStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model KycRecord {
+  id           String    @id @default(cuid())
+  userId       String    @map("userId")
+  level        KycLevel
+  documentType String    @map("documentType")
+  documentEnc  String    @map("document_enc") // AES-256-GCM : iv:tag:cipher (base64url)
+  selfieEnc    String?   @map("selfie_enc")
+  status       KycStatus @default(PENDING)
+  rejectReason String?   @map("reject_reason")
+  reviewedBy   String?   @map("reviewed_by")
+  reviewedAt   DateTime? @map("reviewed_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@index([status, createdAt(sort: Desc)])
+  @@map("kyc_records")
+}
