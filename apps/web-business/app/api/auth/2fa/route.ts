@@ -43,3 +43,4 @@ export async function POST(request: NextRequest) {
   });
   return res;
 }
+export const dynamic = 'force-dynamic';

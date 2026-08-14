@@ -18,7 +18,7 @@ import {
   WalletType,
 } from '@goursi/shared-types';
 import { validatePhoneNumber } from '@goursi/validation-rules';
-import { User } from '@prisma/client';
+import { User } from '.prisma/api-core-client';
 
 const BCRYPT_ROUNDS = 12;
 const LOCKOUT_AFTER = 3;

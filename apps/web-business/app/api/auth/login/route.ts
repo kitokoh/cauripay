@@ -23,3 +23,4 @@ export async function GET() {
   res.cookies.set('oidc_state', state, { httpOnly: true, sameSite: 'lax' });
   return res;
 }
+export const dynamic = 'force-dynamic';

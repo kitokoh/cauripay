@@ -6,3 +6,4 @@ export async function GET() {
   res.cookies.delete('admin_session');
   return res;
 }
+export const dynamic = 'force-dynamic';

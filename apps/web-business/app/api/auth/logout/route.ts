@@ -4,3 +4,4 @@ export async function GET() {
   res.cookies.delete('business_session');
   return res;
 }
+export const dynamic = 'force-dynamic';
