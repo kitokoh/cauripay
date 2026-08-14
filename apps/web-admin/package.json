@@ -1,0 +1,32 @@
+{
+  "name": "@goursi/web-admin",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GOURSI — web-admin : back-office Next.js (App Router) — auth Keycloak OIDC + RBAC par section (GOURSI-042a)",
+  "scripts": {
+    "dev": "next dev -p ${WEB_ADMIN_PORT:-3001}",
+    "build": "next build",
+    "start": "next start -p ${WEB_ADMIN_PORT:-3001}",
+    "test": "jest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "jose": "^5.9.6",
+    "next": "^14.2.5",
+    "openid-client": "^5.7.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.14.15",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.4",
+    "typescript": "^5.5.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
