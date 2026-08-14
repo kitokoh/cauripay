@@ -11,8 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: Lint TS (eslint + prettier + tsc)
+  quality:
+    name: quality
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -22,11 +22,18 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - run: npm run lint
-      - run: npm run typecheck
+      - name: ESLint
+        run: npm run lint
+      - name: Typecheck (tsc --noEmit strict)
+        run: npm run typecheck
+      - name: Garde-fou .env (aucun secret committé)
+        run: |
+          if grep -rE "(sk_live|sk_test|AKIA|ghp_|-----BEGIN.*PRIVATE KEY)" --include="*.env*" . 2>/dev/null; then
+            echo "::error::Secret détecté dans un fichier .env committé"; exit 1
+          fi
 
-  test-ts:
-    name: Tests TS (jest)
+  test:
+    name: test
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -36,12 +43,14 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - run: npm run test
+      - name: Tests Jest (tous les workspaces TS)
+        run: npm run test
 
   test-java:
     name: Tests Java (mvn — ledger-service)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    if: hashFiles('services/ledger-service/pom.xml') != ''
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4

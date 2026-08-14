@@ -31,11 +31,16 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - name: Build images
+      - name: Build images (services existants uniquement)
         run: |
-          docker build -f infra/docker/Dockerfile.nestjs --build-arg BUILD_SERVICE=api-core -t goursi-api-core:ci .
-          docker build -f infra/docker/Dockerfile.java -t goursi-ledger:ci .
+          if [ -d services/api-core ]; then
+            docker build -f infra/docker/Dockerfile.nestjs --build-arg BUILD_SERVICE=api-core -t goursi-api-core:ci .
+          fi
+          if [ -f services/ledger-service/pom.xml ]; then
+            docker build -f infra/docker/Dockerfile.java -t goursi-ledger:ci services/ledger-service
+          fi
       - name: Trivy scan (api-core)
+        if: hashFiles('services/api-core/**') != ''
         uses: aquasecurity/trivy-action@0.24.0
         with:
           image-ref: goursi-api-core:ci
@@ -44,6 +49,7 @@ jobs:
           ignore-unfixed: true
           severity: CRITICAL,HIGH
       - name: Trivy scan (ledger)
+        if: hashFiles('services/ledger-service/pom.xml') != ''
         uses: aquasecurity/trivy-action@0.24.0
         with:
           image-ref: goursi-ledger:ci
