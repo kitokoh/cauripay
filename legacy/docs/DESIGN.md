@@ -1,8 +1,9 @@
 # CauriPay — Dossier de conception v0.1
 
 > Agrégateur de paiement dev-first pour l'Afrique centrale et de l'Ouest.
-> Statut : **conception** — toute implémentation est suspendue à la validation de ce document.
-> Date : 2026-08-11 · Auteur : agent MoClaw, pour kitokoh
+> Statut : **validé — v0.1 livrée (sandbox), v0.2 en cours (connecteurs PSP)**.
+> Date : 2026-08-11 · Auteur : agent MoClaw, pour kitokoh · Dernière révision : 2026-08-14
+> Ce document est la **source de vérité** produit/architecture. Les décisions §16 sont validées ; toute remise en cause passe par une nouvelle issue + ADR.
 
 ---
 
@@ -96,7 +97,7 @@ Une seule API (REST, clés `sk_/pk_`), une checkout page hébergée, des webhook
 └─────────────────────────────────────────────────────────────┘
 ```
 
-- **Monorepo npm workspaces** : `server/`, `dashboard/`, `docs/`.
+- **Monorepo npm workspaces** : `server/`, `dashboard/`, `docs/`, `packages/` (libs partagées : registres devises/méthodes, types — source de vérité unique, évite la dérive dashboard/serveur).
 - **Pourquoi Fastify** : performant, schémas JSON natifs (validation), écosystème propre.
 - **Pourquoi node:sqlite** (Node ≥ 22.5) : zéro dépendance native, démarrage immédiat pour l'utilisateur ; remplaçable par Postgres via une couche d'accès unique (`src/db.ts`).
 - **Pas de framework UI lourd** côté dashboard : React + CSS custom (design tokens) → moins de dépendances, plus rapide à démarrer.
@@ -109,7 +110,7 @@ Une seule API (REST, clés `sk_/pk_`), une checkout page hébergée, des webhook
 ```sql
 merchants(
   id TEXT PK, name, company, email UNIQUE, password_hash,
-  pk_test, sk_test, pk_live, sk_live,
+  pk_test, sk_test_hash, pk_live, sk_live_hash,   -- sk_ jamais en clair (sha256)
   wsec_test, wsec_live, live_enabled INTEGER DEFAULT 0,
   created_at, updated_at
 )
@@ -227,14 +228,14 @@ La page affiche clairement « **Mode TEST — aucun débit réel** ».
 
 | Menace | Mitigation |
 |---|---|
-| Vol de secret | Clés `sk_` jamais renvoyées en clair après création (sauf au moment de la rotation), stockage haché côté serveur ; UI avec masquage/copie |
+| Vol de secret | Clés `sk_` **hachées (sha256) au repos** — la valeur en clair n'est renvoyée qu'**une seule fois** (création de compte, rotation), comme Stripe ; `pk_` publiques non sensibles |
 | Rejeu de requêtes | `Idempotency-Key` (UNIQUE) ; curseur pour les listes |
-| Webhooks falsifiés | Signature HMAC-SHA256 (t+body), anti-replay par fenêtre de temps (±5 min) |
-| Mots de passe | bcrypt (coût 12), JWT court avec rotation possible |
+| Webhooks falsifiés | Signature HMAC-SHA256 (t+body), anti-replay par fenêtre de temps (±5 min), anti-SSRF sur les URL (IP privées interdites en production) |
+| Mots de passe | **scrypt natif (node:crypto, salt 16 o, clé 64 o)** — zéro dépendance native, paramètres équivalents ou supérieurs à bcrypt(12) ; JWT 7 j |
 | Injection SQL | Requêtes préparées (node:sqlite) partout |
 | XSS dashboard | React + échappement ; CSP de base |
 | Données carte | **Aucun PAN stocké** — la méthode `card` est simulée en v0.1 ; posture PCI-DSS par conception |
-| Rate limiting | `@fastify/rate-limit` sur /api/v1 (à confirmer en implémentation) |
+| Rate limiting | `@fastify/rate-limit` — **par clé API** sur /api/v1, global sur le reste |
 
 ---
 
@@ -287,19 +288,25 @@ Comparatif : Paystack 1,5 % + ₦100 local / 3,9 % intl ; CinetPay mobile money 
 
 ---
 
-## 16. Décisions de conception — statut (document historique, cf. ADR-002)
-
-> ⚠️ Ce document décrit l'agrégateur **v0.1 (historique)**. La source de vérité courante
-> est [DESIGN-v2.md](DESIGN-v2.md) (plateforme wallet GOURSI, ADR-002).
+## 16. Décisions — statut de validation
 
 | # | Décision | Statut |
 |---|---|---|
-| 1 | **Nom** : CauriPay | ✅ Validée (2026-08-14) |
-| 2 | **Stack** : TypeScript (Fastify + React/Vite) | ✅ Validée (2026-08-14) |
-| 3 | **Périmètre v0.1** : sandbox complet | ✅ Validée (2026-08-14) |
-| 4 | **Monétisation** : commission par transaction (§13) | ⏳ À affiner avec kitokoh |
-| 5 | **Licence** : MIT | ✅ Validée (2026-08-14) |
-| 6 | **Devises/méthodes** v0.1 | ✅ Validée (2026-08-14) |
+| 1 | **Nom : CauriPay** (dépôt public `kitokoh/cauripay` créé) | ✅ Validé 2026-08-12 |
+| 2 | **Stack : TypeScript** (Fastify 5 + React/Vite, node:sqlite) | ✅ Validé 2026-08-12 |
+| 3 | **Périmètre v0.1 : sandbox complet** (pas d'argent réel) | ✅ Validé 2026-08-12 — v0.1 livrée |
+| 4 | **Monétisation** : commission par transaction (§13) | ⏳ Proposition — arbitrée avant le mode live |
+| 5 | **Licence du dépôt : MIT** | ✅ Validé 2026-08-12 |
+| 6 | **Devises/méthodes v0.1** (8 devises × 6 méthodes) | ✅ Validé 2026-08-12 |
+| 7 | **Hachage des mots de passe : scrypt natif** (et non bcrypt) | ✅ Validé 2026-08-14 — scrypt = zéro dépendance native (principe du projet), paramètres ≥ bcrypt(12) ; toute évolution doit passer par une issue |
+| 8 | **Stockage des clés `sk_` : hachées (sha256)**, valeur en clair une seule fois (création/rotation) | ✅ Validé 2026-08-14 — aligne code et conception (modèle Stripe) |
+| 9 | **Registres partagés** dans `packages/` (source de vérité unique devises/méthodes) | ✅ Validé 2026-08-14 |
+| 10 | **Contributeurs multiples** : `main` protégé, PR + CI obligatoires, squash merge | ✅ Validé 2026-08-14 |
+
+Remarque (ADR-1) : le DESIGN initial prévoyait bcrypt(12) ; l'implémentation utilise scrypt natif.
+Décision : **conserver scrypt** (même famille KDF mémoire-dure, aucun ajout de dépendance native —
+principe « zéro dépendance native » du §6) et aligner la conception sur le code, pas l'inverse.
+Toute contrainte externe (ex. exigence client) sera traitée par issue dédiée.
 
 ## 17. Risques & mitigations
 

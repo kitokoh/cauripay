@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { request, setToken } from '../api';
+import { request, setSkTest, setToken } from '../api';
 import { toast } from '../components/Toast';
 import { AuthShell } from './LoginPage';
 
@@ -21,9 +21,10 @@ export function RegisterPage(): JSX.Element {
     if (password.length < 8) return setErr('Mot de passe : 8 caractères minimum.');
     setBusy(true);
     try {
-      const res = await request<{ token: string }>('/auth/register', { method: 'POST', body: { name, company, email, password } });
+      const res = await request<{ token: string; keys?: { secret_test?: string } }>('/auth/register', { method: 'POST', body: { name, company, email, password } });
       setToken(res.token);
-      toast('success', 'Compte créé — bienvenue ! Vos clés API de test sont prêtes.');
+      if (res.keys?.secret_test) setSkTest(res.keys.secret_test);
+      toast('success', 'Compte créé — bienvenue ! Vos clés API de test ont été copiées en local (affichées une seule fois).');
       navigate('/app');
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Erreur');

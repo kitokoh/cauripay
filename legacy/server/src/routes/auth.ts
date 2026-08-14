@@ -1,14 +1,8 @@
 import type { FastifyInstance } from 'fastify';
-import { db, qall, qget, qrun } from '../db.js';
+import { qget, qrun } from '../db.js';
 import { newId } from '../ids.js';
-import {
-  generateApiKey,
-  generateWebhookSecret,
-  hashPassword,
-  requireMerchant,
-  signJwt,
-  verifyPassword,
-} from '../auth.js';
+import { hashPassword, requireMerchant, signJwt, verifyPassword } from '../auth.js';
+import { apiKeyHash, generateApiKey, generateWebhookSecret } from '../secrets.js';
 import { ApiError } from '../payments.js';
 import { toIso } from '../util.js';
 
@@ -29,6 +23,16 @@ interface MerchantRow {
   updated_at: string;
 }
 
+/** Clés renvoyées UNE SEULE fois (création / rotation) — modèle Stripe. */
+export interface OneTimeKeys {
+  publishable_test: string;
+  secret_test: string;
+  publishable_live: string;
+  secret_live: string;
+  webhook_secret_test: string;
+  webhook_secret_live: string;
+}
+
 export function merchantJson(m: MerchantRow): Record<string, unknown> {
   return { id: m.id, name: m.name, company: m.company, email: m.email, created_at: m.created_at };
 }
@@ -46,7 +50,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     if (!EMAIL_RE.test(email)) throw new ApiError(400, 'invalid_request_error', 'Email invalide.');
     if (password.length < 8) throw new ApiError(400, 'invalid_request_error', 'Mot de passe : 8 caractères minimum.');
 
-    const exists = qget('SELECT id FROM merchants WHERE email = ?', email);;
+    const exists = qget('SELECT id FROM merchants WHERE email = ?', email);
     if (exists) throw new ApiError(409, 'email_taken', 'Un compte existe déjà avec cet email.');
 
     const id = newId('mer');
@@ -59,13 +63,26 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const wsec_live = generateWebhookSecret('live');
 
     qrun(
-      `INSERT INTO merchants (id, name, company, email, password_hash, pk_test, sk_test, pk_live, sk_live, wsec_test, wsec_live, live_enabled, created_at, updated_at)
+      `INSERT INTO merchants (id, name, company, email, password_hash, pk_test, sk_test_hash, pk_live, sk_live_hash, wsec_test, wsec_live, live_enabled, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
-    id, name, body.company?.trim() || '', email, hashPassword(password), pk_test, sk_test, pk_live, sk_live, wsec_test, wsec_live, now, now);
+    id, name, body.company?.trim() || '', email, hashPassword(password), pk_test, apiKeyHash(sk_test), pk_live, apiKeyHash(sk_live), wsec_test, wsec_live, now, now);
 
     const merchant = qget<MerchantRow>('SELECT * FROM merchants WHERE id = ?', id)!;
     reply.code(201);
-    return { token: signJwt(id), merchant: merchantJson(merchant) };
+    // Clés sk_ hachées au repos : la valeur en clair n'est renvoyée qu'ici, une seule fois.
+    return {
+      token: signJwt(id),
+      merchant: merchantJson(merchant),
+      keys: {
+        publishable_test: pk_test,
+        secret_test: sk_test,
+        publishable_live: pk_live,
+        secret_live: sk_live,
+        webhook_secret_test: wsec_test,
+        webhook_secret_live: wsec_live,
+      },
+      message: 'Clés renvoyées une seule fois — copiez-les maintenant (modèle Stripe).',
+    };
   });
 
   app.post('/api/auth/login', async (req) => {
@@ -97,10 +114,10 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         throw new ApiError(400, 'invalid_request_error', 'password_current est requis et doit être correct.');
       }
       if (body.password.length < 8) throw new ApiError(400, 'invalid_request_error', 'Mot de passe : 8 caractères minimum.');
-      qrun('UPDATE merchants SET password_hash = ?, updated_at = ? WHERE id = ?', hashPassword(body.password), toIso(), merchant.id);;
+      qrun('UPDATE merchants SET password_hash = ?, updated_at = ? WHERE id = ?', hashPassword(body.password), toIso(), merchant.id);
     }
 
-    qrun('UPDATE merchants SET name = ?, company = ?, updated_at = ? WHERE id = ?', name, company, toIso(), merchant.id);;
+    qrun('UPDATE merchants SET name = ?, company = ?, updated_at = ? WHERE id = ?', name, company, toIso(), merchant.id);
     const fresh = qget<MerchantRow>('SELECT * FROM merchants WHERE id = ?', merchant.id)!;
     return { merchant: merchantJson(fresh) };
   });

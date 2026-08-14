@@ -1,7 +1,8 @@
 import { createHmac } from 'node:crypto';
 import { db, qall, qget, qrun } from './db.js';
+import { config } from './config.js';
 import { newId } from './ids.js';
-import { parseJson, toIso } from './util.js';
+import { isSafeWebhookUrl, parseJson, toIso } from './util.js';
 
 export interface WebhookRow {
   id: string;
@@ -77,7 +78,11 @@ async function deliverWithRetry(webhookId: string, attemptId: string, eventType:
   let error: string | null = null;
   let delivered = false;
 
-  try {
+  // Anti-SSRF à la livraison (défense en profondeur, re-vérifie même si l'URL a changé en base).
+  const urlCheck = await isSafeWebhookUrl(wh.url, { blockPrivate: config.blockPrivateWebhookUrls, requireHttps: config.requireHttpsWebhooks });
+  if (!urlCheck.ok) {
+    error = `URL bloquée (anti-SSRF) : ${urlCheck.reason}`;
+  } else try {
     const res = await fetch(wh.url, {
       method: 'POST',
       headers: {

@@ -1,11 +1,27 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { requireApiKey } from '../auth.js';
+import { config } from '../config.js';
 import { ApiError, createPayment, getPayment, listPayments, paymentToJson, transition } from '../payments.js';
 import { CURRENCIES, METHODS } from '../registries.js';
 
+/** Clé de bucket du rate limit : la clé API elle-même (issue #3). */
+function apiKeyBucket(req: FastifyRequest): string {
+  const h = req.headers.authorization ?? '';
+  return h.startsWith('Bearer ') ? h.slice(7).trim() : req.ip;
+}
+
 export async function paymentsApiRoutes(app: FastifyInstance): Promise<void> {
-  // Toutes les routes /api/v1/* exigent une clé API (sk_/pk_).
-  const keyed = { preHandler: requireApiKey };
+  // Toutes les routes /api/v1/* exigent une clé API (sk_/pk_) et sont limitées PAR CLÉ.
+  const keyed = {
+    preHandler: requireApiKey,
+    config: {
+      rateLimit: {
+        max: config.rateLimitPerKey,
+        timeWindow: '1 minute',
+        keyGenerator: apiKeyBucket,
+      },
+    },
+  };
 
   // ---------- Paiements ----------
 
@@ -48,6 +64,13 @@ export async function paymentsApiRoutes(app: FastifyInstance): Promise<void> {
       if (ctx.scope !== 'secret' || ctx.mode !== 'test') {
         reply.code(403).send({ error: { type: 'permission_error', code: 'sandbox_test_only', message: 'Le simulateur exige une clé secrète de test (sk_test_*).' } });
       }
+    },
+    config: {
+      rateLimit: {
+        max: config.rateLimitPerKey,
+        timeWindow: '1 minute',
+        keyGenerator: apiKeyBucket,
+      },
     },
   };
 

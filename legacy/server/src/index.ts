@@ -13,8 +13,10 @@ import { ApiError } from './payments.js';
 export async function buildApp() {
   const app = Fastify({ logger: { level: process.env.LOG_LEVEL || 'info' } });
 
-  await app.register(cors, { origin: true });
-  await app.register(rateLimit, { max: 300, timeWindow: '1 minute' });
+  // CORS : en dev, localhost ; en production, liste blanche explicite (CORS_ORIGINS).
+  await app.register(cors, { origin: config.isProd ? config.corsOrigins : true });
+  // Rate limit global (IP) : dashboard, checkout. /api/v1 est limité PAR CLÉ (voir routes/payments.ts).
+  await app.register(rateLimit, { max: config.rateLimitGlobal, timeWindow: '1 minute' });
 
   // Base publique pour les checkout_url (dépend du host de la requête).
   app.addHook('onRequest', async (req) => {

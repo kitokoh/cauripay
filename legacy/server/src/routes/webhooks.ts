@@ -3,8 +3,9 @@ import { db, qall, qget, qrun } from '../db.js';
 import { newId } from '../ids.js';
 import { requireMerchant } from '../auth.js';
 import { ApiError } from '../payments.js';
+import { config } from '../config.js';
 import { replayLastEvent, sendTestPing, type WebhookRow } from '../webhooks.js';
-import { parseJson, toIso } from '../util.js';
+import { isSafeWebhookUrl, parseJson, toIso } from '../util.js';
 
 const EVENT_TYPES = ['payment.created', 'payment.processing', 'payment.succeeded', 'payment.failed', 'payment.cancelled', 'payment.expired'];
 
@@ -37,6 +38,15 @@ export async function webhookRoutes(app: FastifyInstance): Promise<void> {
       throw new ApiError(400, 'invalid_request_error', `Événements invalides. Valides : ${validTypes.join(', ')}`);
     }
     const mode = body.mode === 'live' ? 'live' : 'test';
+
+    // Limite par marchand (anti-spam) + validation URL (anti-SSRF amont).
+    const count = qget<{ c: number }>('SELECT COUNT(*) AS c FROM webhooks WHERE merchant_id = ? AND mode = ?', req.merchantId, mode);
+    if ((count?.c ?? 0) >= config.maxWebhooksPerMerchant) {
+      throw new ApiError(400, 'webhook_limit_exceeded', `Maximum ${config.maxWebhooksPerMerchant} webhooks par compte (mode ${mode}).`);
+    }
+    const urlCheck = await isSafeWebhookUrl(url, { blockPrivate: config.blockPrivateWebhookUrls, requireHttps: config.requireHttpsWebhooks });
+    if (!urlCheck.ok) throw new ApiError(400, 'invalid_webhook_url', urlCheck.reason ?? 'URL de webhook invalide.');
+
     const now = toIso();
 
     const secretCol = mode === 'test' ? 'wsec_test' : 'wsec_live';
@@ -55,21 +65,21 @@ export async function webhookRoutes(app: FastifyInstance): Promise<void> {
     const body = (req.body ?? {}) as { active?: number };
     const wh = qget<WebhookRow>('SELECT * FROM webhooks WHERE id = ? AND merchant_id = ?', id, req.merchantId)!;
     if (!wh) throw new ApiError(404, 'not_found', 'Webhook introuvable.');
-    qrun('UPDATE webhooks SET active = ?, updated_at = ? WHERE id = ?', body.active ? 1 : 0, toIso(), id);;
+    qrun('UPDATE webhooks SET active = ?, updated_at = ? WHERE id = ?', body.active ? 1 : 0, toIso(), id);
     const fresh = qget<WebhookRow>('SELECT * FROM webhooks WHERE id = ?', id)!;
     return { webhook: webhookJson(fresh) };
   });
 
   app.delete('/api/webhooks/:id', { preHandler: requireMerchant }, async (req) => {
     const { id } = req.params as { id: string };
-    const res = qrun('DELETE FROM webhooks WHERE id = ? AND merchant_id = ?', id, req.merchantId);;
+    const res = qrun('DELETE FROM webhooks WHERE id = ? AND merchant_id = ?', id, req.merchantId);
     if (res.changes === 0) throw new ApiError(404, 'not_found', 'Webhook introuvable.');
     return { ok: true };
   });
 
   app.get('/api/webhooks/:id/attempts', { preHandler: requireMerchant }, async (req) => {
     const { id } = req.params as { id: string };
-    const wh = qget('SELECT * FROM webhooks WHERE id = ? AND merchant_id = ?', id, req.merchantId);;
+    const wh = qget('SELECT * FROM webhooks WHERE id = ? AND merchant_id = ?', id, req.merchantId);
     if (!wh) throw new ApiError(404, 'not_found', 'Webhook introuvable.');
     const rows = db
       .prepare('SELECT * FROM webhook_attempts WHERE webhook_id = ? ORDER BY created_at DESC LIMIT 50')
@@ -92,7 +102,7 @@ export async function webhookRoutes(app: FastifyInstance): Promise<void> {
 
   app.post('/api/webhooks/:id/replay', { preHandler: requireMerchant }, async (req) => {
     const { id } = req.params as { id: string };
-    const wh = qget('SELECT * FROM webhooks WHERE id = ? AND merchant_id = ?', id, req.merchantId);;
+    const wh = qget('SELECT * FROM webhooks WHERE id = ? AND merchant_id = ?', id, req.merchantId);
     if (!wh) throw new ApiError(404, 'not_found', 'Webhook introuvable.');
     const attemptId = await replayLastEvent(id);
     return { ok: true, attempt_id: attemptId };
@@ -100,7 +110,7 @@ export async function webhookRoutes(app: FastifyInstance): Promise<void> {
 
   app.post('/api/webhooks/:id/test', { preHandler: requireMerchant }, async (req) => {
     const { id } = req.params as { id: string };
-    const wh = qget('SELECT * FROM webhooks WHERE id = ? AND merchant_id = ?', id, req.merchantId);;
+    const wh = qget('SELECT * FROM webhooks WHERE id = ? AND merchant_id = ?', id, req.merchantId);
     if (!wh) throw new ApiError(404, 'not_found', 'Webhook introuvable.');
     const attemptId = await sendTestPing(id);
     return { ok: true, attempt_id: attemptId };
