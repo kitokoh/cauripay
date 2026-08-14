@@ -3,6 +3,12 @@
 SHELL := /bin/bash
 COMPOSE := docker compose
 
+# Charge .env s'il existe (variables exportées pour toutes les cibles)
+ifneq (,$(wildcard .env))
+include .env
+export
+endif
+
 .PHONY: help install setup up down migrate migrate-java migrate-prisma seed test test-ts test-java lint validate-env format studio health logs reset audit audit-sql
 
 help: ## Affiche l'aide
