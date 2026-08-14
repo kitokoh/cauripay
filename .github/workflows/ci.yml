@@ -70,7 +70,7 @@ jobs:
       - name: Maven test (exécution)
         if: steps.pom.outputs.exists == 'true'
         working-directory: services/ledger-service
-        run: mvn -B -q test
+        run: mvn -B -q verify
 
   legacy:
     name: Tests legacy v0.1 (archivé)

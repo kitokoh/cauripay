@@ -3,22 +3,18 @@ package com.goursi.ledger.domain.exception;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-/**
- * Levée quand un débit dépasse le solde disponible (ou le solde tout court).
- *
- * <p>Mappe sur HTTP 422 {@code INSUFFICIENT_FUNDS} — jamais sur 500 :
- * c'est une réponse métier attendue, pas une erreur système.
- */
+/** Solde insuffisant → HTTP 422 (code INSUFFICIENT_FUNDS). */
 public class InsufficientFundsException extends RuntimeException {
 
   private final UUID walletId;
-  private final BigDecimal balance;
+  private final BigDecimal available;
   private final BigDecimal requested;
 
-  public InsufficientFundsException(UUID walletId, BigDecimal balance, BigDecimal requested) {
-    super("Solde insuffisant");
+  public InsufficientFundsException(UUID walletId, BigDecimal available, BigDecimal requested) {
+    super("Solde insuffisant pour le wallet " + walletId
+        + " : disponible " + available + ", requis " + requested);
     this.walletId = walletId;
-    this.balance = balance;
+    this.available = available;
     this.requested = requested;
   }
 
@@ -26,8 +22,8 @@ public class InsufficientFundsException extends RuntimeException {
     return walletId;
   }
 
-  public BigDecimal getBalance() {
-    return balance;
+  public BigDecimal getAvailable() {
+    return available;
   }
 
   public BigDecimal getRequested() {
