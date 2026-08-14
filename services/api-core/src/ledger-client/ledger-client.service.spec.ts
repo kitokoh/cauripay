@@ -22,7 +22,7 @@ describe('LedgerClientService (GOURSI-022a)', () => {
 
   it('transferAtomic OK → résultat typé', async () => {
     const data = { transactionId: 'tx-1', ledgerEntryIds: ['e1'], fromBalance: '9.00', toBalance: '1.00' };
-    global.fetch = mockFetch(201, { success: true, data }) as any;
+    global.fetch = mockFetch(201, data) as any;
     const service = new LedgerClientService(config);
     const result = await service.transferAtomic({
       idempotencyKey: 'k',
@@ -39,8 +39,10 @@ describe('LedgerClientService (GOURSI-022a)', () => {
 
   it('422 INSUFFICIENT_FUNDS → LedgerError typé (code préservé)', async () => {
     global.fetch = mockFetch(422, {
-      success: false,
-      error: { code: 'INSUFFICIENT_FUNDS', message: 'Solde insuffisant', details: { available: '1.00' } },
+      code: 'INSUFFICIENT_FUNDS',
+      message: 'Solde insuffisant',
+      details: { available: '1.00' },
+      timestamp: new Date().toISOString(),
     }) as any;
     const service = new LedgerClientService(config);
     await expect(
@@ -49,7 +51,7 @@ describe('LedgerClientService (GOURSI-022a)', () => {
   });
 
   it('409 IDEMPOTENCY_CONFLICT → LedgerError 409', async () => {
-    global.fetch = mockFetch(409, { success: false, error: { code: 'IDEMPOTENCY_CONFLICT', message: 'Clé déjà utilisée' } }) as any;
+    global.fetch = mockFetch(409, { code: 'IDEMPOTENCY_CONFLICT', message: 'Clé déjà utilisée' }) as any;
     const service = new LedgerClientService(config);
     await expect(service.getBalance('w-1')).rejects.toMatchObject({ status: 409, code: 'IDEMPOTENCY_CONFLICT' });
   });

@@ -92,12 +92,16 @@ export class LedgerClientService {
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });
-      const json = (await res.json().catch(() => null)) as { success?: boolean; data?: T; error?: { code: string; message: string; details?: unknown } };
-      if (!res.ok || !json?.success) {
-        const err = json?.error;
-        throw new LedgerError(res.status, err?.code ?? 'LEDGER_ERROR', err?.message ?? `Erreur ledger ${res.status}`, err?.details);
+      const json = (await res.json().catch(() => null)) as { code?: string; message?: string; details?: unknown } | null;
+      if (!res.ok) {
+        throw new LedgerError(
+          res.status,
+          json?.code ?? 'LEDGER_ERROR',
+          json?.message ?? `Erreur ledger ${res.status}`,
+          json?.details,
+        );
       }
-      return json.data as T;
+      return json as T;
     } catch (e) {
       if (e instanceof LedgerError) throw e;
       this.logger.error(`Appel ledger ${method} ${path} échoué`, (e as Error).message);
