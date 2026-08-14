@@ -1,0 +1,5 @@
+# Build Next.js
+.next/
+
+# Local 2FA store (données locales de démonstration, voir lib/auth/2fa-store.ts)
+data/
