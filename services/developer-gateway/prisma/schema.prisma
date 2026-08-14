@@ -1,0 +1,80 @@
+// GOURSI — schéma Prisma developer-gateway (GOURSI-050, spec §1.1 + §5)
+// Clés API stockées HACHÉES (sha256) — jamais en clair (aligné spec §8 + issue #40).
+// Output dédié : le monorepo partage plusieurs schémas Prisma — un client isolé
+// par service évite d'écraser le client généré par défaut (pattern kyc-service).
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/developer-gateway-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ApiKeyMode {
+  TEST
+  LIVE
+}
+
+enum ApiKeyStatus {
+  ACTIVE
+  REVOKED
+}
+
+enum WebhookDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model ApiKey {
+  id          String        @id @default(uuid())
+  name        String
+  pairId      String // lie la clé secrète (sk_) à sa clé publique (pk_) — même paire
+  keyPrefix   String // 8 premiers caractères (sk_test_ / pk_test_)
+  keyHash     String        @unique // sha256 hex de la clé — JAMAIS en clair
+  mode        ApiKeyMode    @default(TEST)
+  status      ApiKeyStatus  @default(ACTIVE)
+  ownerUserId String
+  createdAt   DateTime      @default(now())
+  revokedAt   DateTime?
+  lastUsedAt  DateTime?
+
+  webhookEndpoints WebhookEndpoint[]
+
+  @@index([ownerUserId])
+  @@index([pairId])
+}
+
+model WebhookEndpoint {
+  id        String   @id @default(uuid())
+  apiKeyId  String
+  apiKey    ApiKey   @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+  url       String
+  secret    String // hex 32 — signe les webhooks (HMAC-SHA256, X-Goursi-Signature)
+  events    Json // tableau d'événements, ex. ["payment.succeeded", "payment.failed"]
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deliveries WebhookDelivery[]
+
+  @@index([apiKeyId])
+}
+
+model WebhookDelivery {
+  id          String                @id @default(uuid())
+  endpointId  String
+  endpoint    WebhookEndpoint       @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  eventType   String
+  payload     Json
+  signature   String // X-Goursi-Signature envoyée (t=...,v1=...)
+  status      WebhookDeliveryStatus @default(PENDING)
+  attempts    Int                   @default(0)
+  nextRetryAt DateTime?
+  lastError   String?
+  createdAt   DateTime              @default(now())
+
+  @@index([endpointId, status])
+}
