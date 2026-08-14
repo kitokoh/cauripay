@@ -43,6 +43,8 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci --no-audit --no-fund
+      - name: Build (tous les workspaces TS)
+        run: npm run build
       - name: Tests Jest (tous les workspaces TS)
         run: npm run test
 
