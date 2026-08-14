@@ -1,0 +1,79 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# ledger-service — Spring Boot 3.2 (Java 21)
+# Cœur comptable : SEUL service autorisé à écrire ledger_balances (règle absolue 1).
+# Convention : docs/DESIGN-v2.md · REVUE-CONSTITUTION.md (ports 3000→3080).
+# ─────────────────────────────────────────────────────────────────────────────
+server:
+  port: ${LEDGER_PORT:3010}
+  shutdown: graceful
+
+spring:
+  application:
+    name: ledger-service
+  datasource:
+    url: ${LEDGER_DATABASE_URL}
+    username: ${POSTGRES_USER:goursi}
+    password: ${POSTGRES_PASSWORD:change-me}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+  jpa:
+    hibernate:
+      ddl-auto: validate            # Flyway est le SEUL maître du DDL
+      default_schema: ledger
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    schemas: ledger
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+  data:
+    redis:
+      url: ${REDIS_URL}
+      timeout: 2s
+  rabbitmq:
+    addresses: ${RABBITMQ_URL}
+    listener:
+      simple:
+        retry:
+          enabled: true
+          max-attempts: 3
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  metrics:
+    tags:
+      application: ledger-service
+
+logging:
+  level:
+    com.goursi.ledger: ${LOG_LEVEL:info}
+
+goursi:
+  ledger:
+    # Clé partagée inter-services (X-Service-Key) — injectée par environnement,
+    # jamais de valeur par défaut en prod. Génération : openssl rand -hex 32.
+    internal-service-key: ${INTERNAL_SERVICE_KEY}
+    # Durée de rétention de l'idempotence Redis (heures)
+    idempotency-ttl-hours: ${LEDGER_IDEMPOTENCY_TTL_HOURS:24}
+    # Snapshot nightly des soldes (checkpoints COBAC)
+    checkpoint-cron: "${LEDGER_CHECKPOINT_CRON:0 0 2 * * *}"
+    # Wallet qui collecte les frais de plateforme (créé par api-core, solde 0)
+    platform-fees-wallet-id: ${PLATFORM_FEES_WALLET_ID:00000000-0000-0000-0000-000000000001}

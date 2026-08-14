@@ -44,3 +44,6 @@ data/
 # IDE
 .vscode/
 zap-report*
+
+# Outils agents
+.claude/
