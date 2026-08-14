@@ -71,6 +71,10 @@ jobs:
         if: steps.pom.outputs.exists == 'true'
         working-directory: services/ledger-service
         run: mvn -B -q test
+      - name: Maven integration tests (Testcontainers — postgres/redis/rabbitmq)
+        if: steps.pom.outputs.exists == 'true'
+        working-directory: services/ledger-service
+        run: mvn -B -q -Pintegration verify
 
   legacy:
     name: Tests legacy v0.1 (archivé)
