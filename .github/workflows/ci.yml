@@ -6,8 +6,34 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  quality:
+    name: Qualité (lint · typecheck · audit · secrets)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: ESLint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Audit dépendances (niveau high)
+        run: npm audit --audit-level=high
+      - name: Scan secrets (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   test:
+    name: Tests & builds
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,7 +44,7 @@ jobs:
       - run: npm ci
       - name: Build serveur
         run: npm -w server run build
-      - name: Tests E2E
+      - name: Tests serveur (E2E)
         run: npm test
       - name: Build dashboard
         run: npm -w dashboard run build

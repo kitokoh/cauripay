@@ -1,0 +1,7 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://github.com/kitokoh/cauripay/blob/main/README.md
+    about: Commencez par le README et docs/DESIGN.md.
+  - name: Sécurité
+    about: Ne signalez JAMAIS une vulnérabilité ici — voir SECURITY.md.

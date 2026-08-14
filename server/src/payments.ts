@@ -1,5 +1,5 @@
-import { db, qall, qget, qrun } from './db.js';
-import { newId, randId } from './ids.js';
+import { qall, qget, qrun } from './db.js';
+import { newId } from './ids.js';
 import { CURRENCIES, currencyByCode, methodById, ALL_METHOD_IDS } from './registries.js';
 import { parseJson, toIso } from './util.js';
 import { dispatchEvent } from './webhooks.js';
@@ -116,7 +116,10 @@ export function listPayments(merchantId: string, opts: { status?: string; limit:
   const limit = Math.min(Math.max(opts.limit || 25, 1), 100);
   const clauses = ['merchant_id = ?'];
   const params: unknown[] = [merchantId];
-  if (opts.status) clauses.push('status = ?'), params.push(opts.status);
+  if (opts.status) {
+    clauses.push('status = ?');
+    params.push(opts.status);
+  }
   if (opts.before) {
     const b = qget<{ created_at: string; id: string }>('SELECT created_at, id FROM payments WHERE id = ? AND merchant_id = ?', opts.before, merchantId);
     if (b) {

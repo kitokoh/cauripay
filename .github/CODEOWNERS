@@ -1,0 +1,9 @@
+# Propriétaires de code — CauriPay
+# Chaque changement significatif doit être approuvé par un propriétaire.
+# (La protection de branche exige une PR ; la revue de code est attendue.)
+
+* @kitokoh
+
+# Les décisions d'architecture passent par une revue explicite
+docs/ADRs/ @kitokoh
+.github/ @kitokoh
