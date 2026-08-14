@@ -1,0 +1,12 @@
+{
+  "name": "@goursi/payment-rail-contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Contrat d'adaptateur de rail de paiement (IRailAdapter) — chaque rail ajoutable en 1 fichier.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "engines": { "node": ">=20.0.0" }
+}
