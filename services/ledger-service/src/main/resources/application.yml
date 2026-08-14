@@ -24,7 +24,7 @@ spring:
     baseline-on-migrate: true
   data:
     redis:
-      url: ${REDIS_URL}
+      url: ${REDIS_URL:}
   rabbitmq:
     addresses: ${RABBITMQ_URL}
 

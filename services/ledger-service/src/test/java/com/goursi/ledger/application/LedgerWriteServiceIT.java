@@ -58,8 +58,7 @@ class LedgerWriteServiceIT {
     registry.add("spring.datasource.url", postgres::getJdbcUrl);
     registry.add("spring.datasource.username", postgres::getUsername);
     registry.add("spring.datasource.password", postgres::getPassword);
-    registry.add("spring.data.redis.host", redis::getHost);
-    registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
+    registry.add("spring.data.redis.url", () -> "redis://" + redis.getHost() + ":" + redis.getMappedPort(6379));
     registry.add("spring.rabbitmq.addresses", rabbit::getAmqpUrl);
     registry.add("goursi.internal.service-key", () -> "test-service-key");
   }
@@ -74,6 +73,18 @@ class LedgerWriteServiceIT {
   private UUID newWallet(BigDecimal initial) {
     UUID id = UUID.randomUUID();
     balanceRepository.save(new LedgerBalance(id, initial));
+    // L'invariant vérifié par LedgerVerifyService est : solde stocké == SUM(entries).
+    // Un wallet est toujours créé à 0 en production (ADR-003) : tout solde initial de
+    // fixture DOIT être matérialisé par une écriture CREDIT, sinon le contrôle COBAC
+    // signale un écart légitime.
+    if (initial.compareTo(BigDecimal.ZERO) > 0) {
+      jdbc.update("""
+              INSERT INTO ledger.ledger_entries
+                  (transaction_id, wallet_id, direction, amount, balance_before, balance_after, entry_type, description)
+              VALUES (?, ?, 'CREDIT', ?, 0, ?, 'PRINCIPAL', 'seed fixture')
+              """,
+          UUID.randomUUID(), id, initial, initial);
+    }
     return id;
   }
 
