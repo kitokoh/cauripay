@@ -3,7 +3,7 @@
 SHELL := /bin/bash
 COMPOSE := docker compose
 
-.PHONY: help install setup up down migrate migrate-java migrate-prisma seed test test-ts test-java lint format studio health logs reset audit audit-sql
+.PHONY: help install setup up down migrate migrate-java migrate-prisma seed test test-ts test-java lint validate-env format studio health logs reset audit audit-sql
 
 help: ## Affiche l'aide
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -46,6 +46,9 @@ test-java: ## Tests Maven (ledger-service)
 lint: ## ESLint + Prettier + typecheck TS
 	npm run lint
 	npm run typecheck
+
+validate-env: ## Valide la configuration (toutes les variables .env.example résolues)
+	node scripts/validate-env.mjs
 
 format: ## Prettier --write
 	npm run format
