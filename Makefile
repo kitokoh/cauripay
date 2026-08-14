@@ -70,3 +70,11 @@ audit-sql: ## Scripts d'audit SQL (GOURSI-QA2) — 0 écart requis
 reset: ## ⚠️ Réinitialise TOUT (données locales détruites)
 	@read -p "Confirmer la réinitialisation complète ? (taper RESET) " ans; \
 	if [ "$$ans" = "RESET" ]; then $(COMPOSE) down -v && echo "✔ Reset effectué"; else echo "Annulé"; fi
+
+load-test: ## GOURSI-QA1 — test de charge k6 (DoD #7 : 1000 tx/min, p95 < 2 s, erreur < 0,1 %)
+	@test -n "$$BASE_URL" || (echo "BASE_URL requis (ex: make load-test BASE_URL=http://localhost:3000)"; exit 1)
+	@k6 run -e BASE_URL=$${BASE_URL} -e VUS=$${VUS:-50} -e DURATION=$${DURATION:-2m} tests/load/p2p-1000tpm.js
+
+zap-baseline: ## GOURSI-QA3 — OWASP ZAP baseline (DoD #10 : 0 vulnérabilité critique)
+	@test -n "$$ZAP_TARGET" || (echo "ZAP_TARGET requis (ex: make zap-baseline ZAP_TARGET=https://staging.goursi.app)"; exit 1)
+	@./tests/security/zap-baseline/run-zap.sh $${ZAP_TARGET}

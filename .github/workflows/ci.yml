@@ -78,3 +78,52 @@ jobs:
         run: |
           npm ci --no-audit --no-fund
           npm test
+
+  audit-sql:
+    name: Audit SQL (immutabilité + équilibre comptable)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: goursi
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: goursi_ledger
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U goursi"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        if: hashFiles('services/ledger-service/pom.xml') != ''
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+      - name: Migrations Flyway (ledger-service)
+        if: hashFiles('services/ledger-service/pom.xml') != ''
+        working-directory: services/ledger-service
+        env:
+          LEDGER_DATABASE_URL: jdbc:postgresql://localhost:5432/goursi_ledger
+          LEDGER_DATABASE_USER: goursi
+          LEDGER_DATABASE_PASSWORD: test
+          INTERNAL_SERVICE_KEY: ci_audit_key
+        run: mvn -B -q flyway:migrate
+      - name: Audit immutabilité (GOURSI-QA2)
+        env:
+          LEDGER_DATABASE_URL: postgresql://goursi:test@localhost:5432/goursi_ledger
+        run: |
+          psql "$LEDGER_DATABASE_URL" -v ON_ERROR_STOP=0 -f scripts/audit/check_immutability.sql
+      - name: Audit équilibre comptable — 0 écart (GOURSI-QA2)
+        env:
+          LEDGER_DATABASE_URL: postgresql://goursi:test@localhost:5432/goursi_ledger
+        run: |
+          set -euo pipefail
+          ROWS=$(psql "$LEDGER_DATABASE_URL" -tA -f scripts/audit/check_balance.sql | wc -l)
+          echo "Lignes d'écart: $ROWS"
+          [ "$ROWS" -eq 0 ] || { echo "::error::Écart comptable détecté (GOURSI-QA2)"; exit 1; }
