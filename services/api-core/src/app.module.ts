@@ -14,6 +14,7 @@ import { AmqModule } from './amq/amq.module';
 import { EnvelopeInterceptor } from './common/interceptors/envelope.interceptor';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { RolesGuard } from './common/guards/roles.guard';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -36,6 +37,8 @@ import { RolesGuard } from './common/guards/roles.guard';
     // Globales : enveloppe de réponse, filtre d'erreurs, RBAC
     { provide: APP_INTERCEPTOR, useClass: EnvelopeInterceptor },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
+    // Ordre critique : JwtAuthGuard global AVANT RolesGuard (sinon user non peuplé → 403 systématique)
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
   ],
 })
