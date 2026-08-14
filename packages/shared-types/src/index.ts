@@ -13,16 +13,14 @@ export interface ApiEnvelope<T> {
   requestId: string;
 }
 
-/** Enveloppe d'erreur : { code, message, details } */
+/** Enveloppe d'erreur FLAT (contrat cross-service, aligné ledger GOURSI-010c) :
+ *  { code, message, details?, timestamp, requestId } */
 export interface ApiErrorEnvelope {
-  success: false;
-  error: {
-    code: string;
-    message: string;
-    details?: Record<string, unknown>;
-  };
+  code: string;
+  message: string;
+  details?: Record<string, unknown>;
   timestamp: string;
-  requestId: string;
+  requestId?: string;
 }
 
 export type ApiResponse<T> = ApiEnvelope<T> | ApiErrorEnvelope;

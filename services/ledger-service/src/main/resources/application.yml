@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # ─────────────────────────────────────────────────────────────────────────────
 # ledger-service — Spring Boot 3.2 (Java 21)
 # Cœur comptable : SEUL service autorisé à écrire ledger_balances (règle absolue 1).
@@ -8,25 +7,19 @@ server:
   port: ${LEDGER_PORT:3010}
   shutdown: graceful
 
-=======
->>>>>>> d17144a (feat(GOURSI-010..016): ledger-service Spring Boot 3.2 — grand livre comptable (G1))
 spring:
   application:
     name: ledger-service
   datasource:
     url: ${LEDGER_DATABASE_URL}
-<<<<<<< HEAD
     username: ${POSTGRES_USER:goursi}
     password: ${POSTGRES_PASSWORD:change-me}
-=======
->>>>>>> d17144a (feat(GOURSI-010..016): ledger-service Spring Boot 3.2 — grand livre comptable (G1))
     hikari:
       maximum-pool-size: 20
       minimum-idle: 5
       connection-timeout: 30000
   jpa:
     hibernate:
-<<<<<<< HEAD
       ddl-auto: validate            # Flyway est le SEUL maître du DDL
       default_schema: ledger
     open-in-view: false
@@ -54,30 +47,6 @@ spring:
     default-property-inclusion: non_null
     serialization:
       write-dates-as-timestamps: false
-=======
-      ddl-auto: validate   # le DDL appartient à Flyway — jamais de update
-    properties:
-      hibernate:
-        default_schema: ledger
-        jdbc:
-          time_zone: UTC
-    open-in-view: false
-  flyway:
-    enabled: true
-    schemas: ledger
-    default-schema: ledger
-    locations: classpath:db/migration
-    baseline-on-migrate: true
-  data:
-    redis:
-      url: ${REDIS_URL}
-  rabbitmq:
-    addresses: ${RABBITMQ_URL}
-
-server:
-  port: ${LEDGER_PORT:3010}
-  shutdown: graceful
->>>>>>> d17144a (feat(GOURSI-010..016): ledger-service Spring Boot 3.2 — grand livre comptable (G1))
 
 management:
   endpoints:
@@ -86,7 +55,6 @@ management:
         include: health,info,metrics,prometheus
   endpoint:
     health:
-<<<<<<< HEAD
       probes:
         enabled: true
       show-details: never
@@ -109,23 +77,3 @@ goursi:
     checkpoint-cron: "${LEDGER_CHECKPOINT_CRON:0 0 2 * * *}"
     # Wallet qui collecte les frais de plateforme (créé par api-core, solde 0)
     platform-fees-wallet-id: ${PLATFORM_FEES_WALLET_ID:00000000-0000-0000-0000-000000000001}
-=======
-      show-details: never
-  metrics:
-    tags:
-      application: ${spring.application.name}
-
-goursi:
-  internal:
-    service-key: ${INTERNAL_SERVICE_KEY}
-  ledger:
-    idempotency-ttl-hours: ${LEDGER_IDEMPOTENCY_TTL_HOURS:24}
-    checkpoint-cron: ${LEDGER_CHECKPOINT_CRON:0 0 2 * * *}
-    exchange: financial.events
-    dlq-exchange: dead.letters
-
-logging:
-  level:
-    com.goursi.ledger: INFO
-    org.hibernate.SQL: WARN
->>>>>>> d17144a (feat(GOURSI-010..016): ledger-service Spring Boot 3.2 — grand livre comptable (G1))
