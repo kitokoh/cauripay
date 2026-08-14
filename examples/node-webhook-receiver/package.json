@@ -1,0 +1,13 @@
+{
+  "name": "cauripay-webhook-receiver-example",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Exemple de récepteur de webhooks CauriPay/GOURSI (Node/Express) — vérification HMAC + déduplication.",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
