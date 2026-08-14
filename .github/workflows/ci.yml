@@ -22,6 +22,8 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci --no-audit --no-fund
+      - name: Génération clients Prisma (api-core, kyc, aml…)
+        run: npm run prisma:generate
       - name: ESLint
         run: npm run lint
       - name: Typecheck (tsc --noEmit strict)
@@ -43,6 +45,8 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci --no-audit --no-fund
+      - name: Génération clients Prisma (api-core, kyc, aml…)
+        run: npm run prisma:generate
       - name: Build (tous les workspaces TS)
         run: npm run build
       - name: Tests Jest (tous les workspaces TS)
