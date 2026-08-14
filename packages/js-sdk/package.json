@@ -1,0 +1,32 @@
+{
+  "name": "@goursi/js-sdk",
+  "version": "0.1.0",
+  "description": "SDK officiel GOURSI (CauriPay) pour Node.js et navigateur — paiements, webhooks signés, sandbox.",
+  "license": "MIT",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "files": [
+    "src",
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "jest"
+  },
+  "keywords": [
+    "payment",
+    "mobile-money",
+    "africa",
+    "cauripay",
+    "goursi"
+  ],
+  "dependencies": {},
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.14.9",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.4",
+    "typescript": "^5.5.4"
+  }
+}
