@@ -22,10 +22,10 @@ GROUP BY (created_at AT TIME ZONE 'UTC')::date;
 REVOKE ALL ON audit.ledger_entries_view, audit.balance_view, audit.daily_balance FROM PUBLIC;
 
 -- Accorder SELECT au rôle courant (indépendant du nom d'utilisateur de la base)
-DO $
+DO $$
 BEGIN
   EXECUTE format(
     'GRANT SELECT ON audit.ledger_entries_view, audit.balance_view, audit.daily_balance TO %I',
     current_user
   );
-END $;
+END $$;
