@@ -1,0 +1,72 @@
+name: Security Scan
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1' # hebdo (lundi 06:00 UTC)
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gitleaks:
+    name: Gitleaks (secrets)
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  trivy:
+    name: Trivy (images — CRITICAL/HIGH bloquent)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build images (services existants uniquement)
+        run: |
+          if [ -d services/api-core ]; then
+            docker build -f infra/docker/Dockerfile.nestjs --build-arg BUILD_SERVICE=api-core -t goursi-api-core:ci .
+          fi
+          if [ -f services/ledger-service/pom.xml ]; then
+            docker build -f infra/docker/Dockerfile.java -t goursi-ledger:ci services/ledger-service
+          fi
+      - name: Trivy scan (api-core)
+        if: hashFiles('services/api-core/**') != ''
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: goursi-api-core:ci
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+      - name: Trivy scan (ledger)
+        if: hashFiles('services/ledger-service/pom.xml') != ''
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: goursi-ledger:ci
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+
+  npm-audit:
+    name: npm audit (high+)
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci --no-audit --no-fund
+      - run: npm audit --audit-level=high
+        continue-on-error: true # non bloquant en Phase 0 (tri manuel documenté)

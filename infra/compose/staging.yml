@@ -1,0 +1,92 @@
+# GOURSI — Compose STAGING (GOURSI-005c)
+# Utilisé par deploy-staging.yml : images du registry + migrations avant démarrage.
+# Aucun secret en clair : tout vient de l'environnement de l'orchestrateur.
+
+networks:
+  goursi-net:
+  internal:
+    internal: true
+
+volumes:
+  postgres-data:
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [goursi-net]
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [goursi-net]
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks: [goursi-net]
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080; echo -e 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3; cat <&3 | grep -q '200 OK'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    networks: [goursi-net]
+
+  ledger-service:
+    image: ${REGISTRY}/goursi-ledger:${TAG}
+    environment:
+      LEDGER_DATABASE_URL: ${LEDGER_DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+      INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY}
+      LEDGER_PORT: "3010"
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    networks: [internal]
+    # Migration avant démarrage : exécutée par le workflow deploy-staging
+    # (flyway migrate puis démarrage du conteneur).
+
+  api-core:
+    image: ${REGISTRY}/goursi-api-core:${TAG}
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+      KEYCLOAK_URL: ${KEYCLOAK_URL}
+      INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY}
+      API_CORE_PORT: "3000"
+    depends_on:
+      ledger-service: { condition: service_started }
+      keycloak: { condition: service_healthy }
+    networks: [goursi-net, internal]

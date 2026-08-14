@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["ES2022"],
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "sourceMap": true,
+    "incremental": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@goursi/shared-types": ["packages/shared-types/src"],
+      "@goursi/shared-types/*": ["packages/shared-types/src/*"],
+      "@goursi/validation-rules": ["packages/validation-rules/src"],
+      "@goursi/validation-rules/*": ["packages/validation-rules/src/*"],
+      "@goursi/payment-rail-contracts": ["packages/payment-rail-contracts/src"],
+      "@goursi/payment-rail-contracts/*": ["packages/payment-rail-contracts/src/*"]
+    }
+  },
+  "exclude": ["node_modules", "dist", "legacy"]
+}
