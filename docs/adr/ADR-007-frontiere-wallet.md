@@ -1,4 +1,4 @@
-# ADR-006 — Création de wallet vs mutation de solde
+# ADR-007 — Création de wallet vs mutation de solde
 
 - **Statut** : Adopté · 2026-08-14
 - **Issue** : GOURSI-ADR1 (#267)
