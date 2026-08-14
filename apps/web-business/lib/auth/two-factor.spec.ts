@@ -1,4 +1,5 @@
 import { TwoFactorService } from './two-factor';
+import { authenticator } from 'otplib';
 
 describe('TwoFactorService (2FA TOTP obligatoire)', () => {
   let svc: TwoFactorService;
@@ -17,14 +18,14 @@ describe('TwoFactorService (2FA TOTP obligatoire)', () => {
   it('accepte un code TOTP valide généré avec le même secret', () => {
     const { secret } = svc.generateSecret('membre@entreprise.com');
     // otplib : génération + vérification cohérentes (fenêtre standard 30 s)
-    const code = require('otplib').authenticator.generate(secret);
+    const code = authenticator.generate(secret);
     expect(svc.verify(secret, code)).toBe(true);
   });
 
   it('refuse un code d’un autre secret', () => {
     const a = svc.generateSecret('a@x.com').secret;
     const b = svc.generateSecret('b@x.com').secret;
-    const code = require('otplib').authenticator.generate(b);
+    const code = authenticator.generate(b);
     expect(svc.verify(a, code)).toBe(false);
   });
 
