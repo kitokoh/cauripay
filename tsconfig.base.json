@@ -18,7 +18,8 @@
     "baseUrl": ".",
     "paths": {
       "@cauripay/shared-types": ["packages/shared-types/src"],
-      "@cauripay/validation-rules": ["packages/validation-rules/src"]
+      "@cauripay/validation-rules": ["packages/validation-rules/src"],
+      "@cauripay/payment-rail-contracts": ["packages/payment-rail-contracts/src"]
     }
   },
   "exclude": ["node_modules", "legacy", "**/dist", "**/target"]

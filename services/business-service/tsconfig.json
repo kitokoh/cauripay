@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "commonjs", "moduleResolution": "node", "target": "ES2022",
+    "outDir": "dist", "baseUrl": "./",
+    "emitDecoratorMetadata": true, "experimentalDecorators": true, "esModuleInterop": true,
+    "paths": {
+      "@cauripay/payment-rail-contracts": ["../../packages/payment-rail-contracts/src"],
+      "@cauripay/shared-types": ["../../packages/shared-types/src"],
+      "@cauripay/validation-rules": ["../../packages/validation-rules/src"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}
