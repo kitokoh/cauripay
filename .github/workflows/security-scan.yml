@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: gitleaks/gitleaks-action@v2
@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build images (services existants uniquement)
         run: |
           if [ -d services/api-core ]; then
@@ -41,7 +41,7 @@ jobs:
           fi
       - name: Trivy scan (api-core)
         if: hashFiles('services/api-core/**') != ''
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@0.24.0
         with:
           image-ref: goursi-api-core:ci
           format: table
@@ -50,7 +50,7 @@ jobs:
           severity: CRITICAL,HIGH
       - name: Trivy scan (ledger)
         if: hashFiles('services/ledger-service/pom.xml') != ''
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@0.24.0
         with:
           image-ref: goursi-ledger:ci
           format: table
@@ -63,8 +63,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
       - run: npm ci --no-audit --no-fund
