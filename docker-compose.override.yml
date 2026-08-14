@@ -1,0 +1,6 @@
+# GOURSI — override de développement (GOURSI-002c)
+# Volumes de sources + hot-reload + ports de debug.
+# Usage : docker compose up -d  (profils dev par défaut)
+
+# Les services NestJS montent leurs sources en volume (watch mode via make dev).
+# x-dev-service: &dev-service  — ancrage réutilisable

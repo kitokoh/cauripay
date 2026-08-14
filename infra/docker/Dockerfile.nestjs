@@ -1,0 +1,35 @@
+# ── Étapes ─────────────────────────────────────────────────────────────────────
+# build : node:20-alpine, npm ci, compilation TS
+# runtime : node:20-alpine, npm ci --omit=dev, dist seul, user non-root (uid 1000)
+# Usage : docker build -f infra/docker/Dockerfile.nestjs services/<nom-service>
+# Règle : l'image reçoit BUILD_SERVICE=<nom> pour cibler le workspace.
+
+FROM node:20-alpine AS build
+WORKDIR /app
+ARG BUILD_SERVICE
+ENV BUILD_SERVICE=${BUILD_SERVICE}
+# 1. Dépendances (cache de couches : package*.json d'abord)
+COPY package.json package-lock.json ./
+COPY packages/shared-types/package.json packages/shared-types/
+COPY packages/validation-rules/package.json packages/validation-rules/
+COPY services/${BUILD_SERVICE}/package.json services/${BUILD_SERVICE}/
+RUN npm ci --no-audit --no-fund --workspace=@goursi/${BUILD_SERVICE} || npm ci --no-audit --no-fund
+# 2. Sources
+COPY packages packages
+COPY services/${BUILD_SERVICE} services/${BUILD_SERVICE}
+COPY tsconfig.base.json ./
+RUN npm run build --workspace=@goursi/${BUILD_SERVICE} || npx tsc -p services/${BUILD_SERVICE}/tsconfig.json
+
+FROM node:20-alpine AS runtime
+ENV NODE_ENV=production
+WORKDIR /app
+RUN addgroup -S -g 1000 goursi && adduser -S -u 1000 -G goursi goursi
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/packages ./packages
+COPY --from=build /app/services/${BUILD_SERVICE}/dist ./dist
+COPY --from=build /app/services/${BUILD_SERVICE}/package.json ./package.json
+USER goursi
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --retries=5 \
+  CMD wget -q -O /dev/null http://127.0.0.1:${PORT:-3000}/health || exit 1
+CMD ["node", "dist/main.js"]

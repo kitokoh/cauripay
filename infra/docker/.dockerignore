@@ -1,0 +1,25 @@
+# Artéfacts de build
+**/target/
+**/dist/
+**/build/
+**/node_modules/
+**/*.tsbuildinfo
+
+# Secrets & env locaux
+.env
+.env.*.local
+
+# Données
+data/
+*.db
+*.sqlite
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Git
+.git/
+.gitignore
+.github/

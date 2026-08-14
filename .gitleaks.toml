@@ -1,0 +1,12 @@
+[extend]
+# GOURSI — gitleaks : configurations étendues (aucun contournement non justifié)
+
+[allowlist]
+description = "Fausses clés de test du monorepo (ne jamais y mettre de vrai secret)"
+paths = [
+  '''\.env\.example''',
+  '''\.env\.test\.example''',
+  '''goursi-reference''',
+  '''docs/security/''',
+  '''tests/security/fixtures''',
+]
