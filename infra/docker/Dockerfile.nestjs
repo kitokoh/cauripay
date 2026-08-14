@@ -1,0 +1,47 @@
+# Dockerfile standardisé pour les services NestJS (TS compilé)
+# Build : node:20-alpine → Runtime : node:20-alpine (non-root)
+#
+# Usage (racine du service) :
+#   docker build -f ../../infra/docker/Dockerfile.nestjs -t cauripay/<service> .
+
+# ---------- Étape de build ----------
+FROM node:20-alpine AS build
+WORKDIR /app
+
+# Dépendances racine (workspaces) — copie ciblée pour le cache de couches
+COPY package.json package-lock.json tsconfig.base.json ./
+COPY packages ./packages
+COPY services ./services
+COPY apps ./apps
+
+# Installation des dépendances du workspace concerné uniquement
+ARG WORKSPACE=services/api-core
+RUN npm ci --workspace ${WORKSPACE} --include-workspace-root || npm ci
+
+# Build TypeScript
+RUN npm run build --workspace ${WORKSPACE}
+
+# ---------- Étape runtime ----------
+FROM node:20-alpine AS runtime
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Utilisateur non-root
+RUN addgroup -g 1000 nodeapp && adduser -u 1000 -G nodeapp -D nodeapp
+
+COPY --from=build --chown=nodeapp:nodeapp /app/package.json /app/package-lock.json /app/
+COPY --from=build --chown=nodeapp:nodeapp /app/node_modules /app/node_modules
+COPY --from=build --chown=nodeapp:nodeapp /app/packages /app/packages
+COPY --from=build --chown=nodeapp:nodeapp /app/services /app/services
+COPY --from=build --chown=nodeapp:nodeapp /app/apps /app/apps
+
+USER nodeapp
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -qO- http://localhost:${PORT:-3000}/health || exit 1
+
+# Surchargé par le service (ex: node services/api-core/dist/main.js)
+CMD ["node", "services/api-core/dist/main.js"]

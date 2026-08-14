@@ -1,0 +1,38 @@
+# docker-compose.override.yml — mode développement (hot-reload)
+# Utilisé automatiquement par `docker compose up` ; --profile ci pour la CI.
+#
+# Les services applicatifs (api-core, ledger, …) sont montés en volumes
+# avec watch pour refléter les modifications sans rebuild d'image.
+
+services:
+  # --- Profile dev (par défaut) : hot-reload des services TS ---
+  api-core:
+    image: node:20-alpine
+    profiles: ['dev']
+    working_dir: /app
+    command: sh -c "npm ci --workspace services/api-core --include-workspace-root && npm run start:dev --workspace services/api-core"
+    volumes:
+      - .:/app
+      - api-node-modules:/app/node_modules
+    ports:
+      - '3000:3000'
+      - '9229:9229' # debug
+    environment:
+      NODE_ENV: development
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    networks:
+      - cauripay-net
+
+  # --- Profile ci : infra minimale sans dépendances superflues ---
+  # (déclenché via docker compose --profile ci up)
+
+volumes:
+  api-node-modules:

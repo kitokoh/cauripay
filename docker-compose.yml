@@ -1,0 +1,137 @@
+# Docker Compose — environnement local CauriPay
+# Services de base : Postgres 16, Redis 7, RabbitMQ 3, Keycloak, Prometheus, Grafana.
+# Usage : docker compose up -d   (les services applicatifs sont ajoutés par les Dockerfiles)
+
+name: cauripay
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cauripay-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: cauripay
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres} -d cauripay']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - cauripay-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: cauripay-redis
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      - '6379:6379'
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - cauripay-net
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: cauripay-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+    ports:
+      - '5672:5672' # AMQP
+      - '15672:15672' # Management UI
+    volumes:
+      - rabbitmqdata:/var/lib/rabbitmq
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - cauripay-net
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: cauripay-keycloak
+    command: ['start-dev', '--import-realm']
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/cauripay
+      KC_DB_USERNAME: ${POSTGRES_USER:-postgres}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - '8080:8080'
+    volumes:
+      - ./infra/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+      - keycloakdata:/opt/keycloak/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://localhost:8080/health/ready || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    networks:
+      - cauripay-net
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: cauripay-prometheus
+    ports:
+      - '9090:9090'
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - promdata:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:9090/-/healthy || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - cauripay-net
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: cauripay-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+    ports:
+      - '3001:3000'
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafanadata:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    networks:
+      - cauripay-net
+
+volumes:
+  pgdata:
+  redisdata:
+  rabbitmqdata:
+  keycloakdata:
+  promdata:
+  grafanadata:
+
+networks:
+  cauripay-net:
+    driver: bridge
