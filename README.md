@@ -1,111 +1,67 @@
-# 🌍 CauriPay — Agrégateur de paiement dev-first pour l'Afrique
+# 🐚 GOURSI — Plateforme wallet CauriPay
 
-> **Une API.** Mobile money (Orange Money, MTN MoMo, Moov, Wave) + cartes + paiements internationaux.
-> Pensé pour l'Afrique centrale et de l'Ouest (UEMOA / CEMAC).
+> **Monorepo de la plateforme wallet** : ledger comptable double écriture, wallet clients/agents/marchands,
+> KYC/AML, paiement de factures, mobile money, USSD, back-offices et developer platform.
+> Le nom vient du **cauri**, coquillage utilisé comme monnaie en Afrique de l'Ouest.
 
-**Statut : MVP v0.1 — mode sandbox complet** (aucune transaction réelle, aucune licence requise pour l'exploiter).
+**Statut : Phase 0 — Fondation & Infrastructure** (voir [docs/DESIGN-v2.md](docs/DESIGN-v2.md)).
+L'ancien agrégateur v0.1 est conservé en historique dans [`legacy/`](legacy/) (voir [ADR-002](docs/adr/ADR-002.md)).
 
-Le nom vient du **cauri**, coquillage utilisé comme monnaie en Afrique de l'Ouest pendant des siècles.
+## 🏗 Architecture cible
 
----
+```
+services/   9 services NestJS + ledger-service Java/Spring (ports 3000→3080)
+apps/       web-admin (3001) · web-business (3002) · mobile-customer · mobile-agent (Flutter)
+packages/   shared-types · validation-rules · payment-rail-contracts · js-sdk · flutter-sdk
+infra/      Docker · Compose · Keycloak (realm goursi) · RabbitMQ (topologie)
+```
 
-## ✨ Ce que fait le MVP
+| Service | Port | Stack | Rôle |
+|---|---|---|---|
+| api-core | 3000 | NestJS + Prisma | Auth, transactions, wallets |
+| ledger-service | 3010 | Spring Boot 3.2 · Java 21 | Grand livre comptable (vérité financière) |
+| business-service | 3020 | NestJS | Paiements marchands, rails, bulk, webhooks |
+| kyc-service | 3030 | NestJS | KYC (documents chiffrés AES-256) |
+| aml-service | 3040 | NestJS | Scoring AML, listes OFAC/ONU/GABAC, gel |
+| notification-service | 3050 | NestJS | SMS, email, push FCM, WhatsApp |
+| ussd-service | 3060 | NestJS | USSD *100# (sessions Redis) |
+| reconciliation-service | 3070 | NestJS | Rapports COBAC quotidiens |
+| developer-gateway | 3080 | NestJS | API publique devs, clés, sandbox |
 
-| Fonctionnalité | Détail |
+Stack transverse : **PostgreSQL 16 · Redis 7 · RabbitMQ 3 · Keycloak (RS256) · Prometheus · Grafana**.
+
+## 🚀 Quickstart monorepo
+
+Prérequis : **Node 20 LTS** (`.nvmrc`), **JDK 21**, **Docker**.
+
+```bash
+git clone https://github.com/kitokoh/cauripay.git && cd cauripay
+cp .env.example .env
+make setup          # npm install + docker compose up + migrate + seed (une seule commande)
+make health         # tous les services répondent ?
+make test           # tests TS (jest) + tests Java (mvn)
+```
+
+Point d'entrée unique : [`Makefile`](Makefile) (voir `make help`).
+Onboarding complet : [docs/ONBOARDING.md](docs/ONBOARDING.md).
+
+## 🧭 Documentation
+
+| Document | Contenu |
 |---|---|
-| **API REST v1** (type Stripe) | Création/lecture/liste/annulation de paiements, idempotence, clés `pk_/sk_` test & live |
-| **Sandbox complet** | Simulateur de providers fidèle aux flux réels (téléphone → PIN → succès/échec) — aucun argent réel |
-| **Checkout hébergée** | Page de paiement prête à l'emploi : `GET /checkout/ck_…` |
-| **Webhooks** | Événements `payment.*`, signature **HMAC-SHA256**, retries avec backoff, journal des tentatives, rejeu |
-| **Dashboard React** | Vue d'ensemble, paiements, simulateur sandbox, webhooks, clés API, réglages |
-| **Devises & méthodes** | XOF, XAF, GNF, CDF, NGN, GHS, EUR, USD × orange_money, mtn_momo, moov_money, wave, card, international |
+| [docs/DESIGN-v2.md](docs/DESIGN-v2.md) | Dossier de conception v2 (source de vérité) |
+| [docs/REVUE-CONSTITUTION.md](docs/REVUE-CONSTITUTION.md) | Constitution du dépôt & migration |
+| [docs/TRACABILITY.md](docs/TRACABILITY.md) | Matrice spec ↔ backlog (couverture Phase 0) |
+| [docs/adr/](docs/adr/) | Décisions d'architecture (ADR-001…004) |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Procédure de déploiement & rollback |
+| [docs/security/](docs/security/) | Rapports ZAP, audits SQL, secrets |
 
-## 🚀 Démarrage rapide (2 minutes)
+## ✅ Qualité & CI/CD
 
-Prérequis : **Node.js ≥ 22.5** (SQLite intégré, aucune autre dépendance système).
-
-```bash
-git clone https://github.com/kitokoh/cauripay.git
-cd cauripay
-npm install
-npm run dev
-```
-
-- **Dashboard** → http://localhost:5173 (ou http://localhost:4000 après build)
-- **API** → http://localhost:4000
-- **Santé** → http://localhost:4000/health
-
-Créez un compte marchand, copiez votre `sk_test_…` depuis **Clés API**, et :
-
-```bash
-# 1. Créer un paiement
-curl -X POST http://localhost:4000/api/v1/payments \
-  -H "Authorization: Bearer sk_test_xxx" \
-  -H "Content-Type: application/json" \
-  -H "Idempotency-Key: cmd-001" \
-  -d '{"amount_minor":25000,"currency":"XOF",
-       "methods":["orange_money","mtn_momo","wave","card"],
-       "description":"Abonnement Premium"}'
-
-# → { "payment": { "id": "pay_…", "status": "pending",
-#                  "checkout_url": "http://localhost:4000/checkout/ck_…", … } }
-
-# 2. Ouvrir checkout_url dans le navigateur, saisir un numéro + PIN → succès
-#    (PIN 0000 simule un échec)
-
-# 3. Simuler une issue côté API (sk_test uniquement)
-curl -X POST http://localhost:4000/api/v1/sandbox/payments/pay_xxx/approve \
-  -H "Authorization: Bearer sk_test_xxx"
-
-# 4. Recevoir l'événement payment.succeeded sur votre webhook
-#    Header : X-CauriPay-Signature: t=<unix>,v1=<hmac-sha256(secret, "t.payload")>
-```
-
-### Recevoir des webhooks en local
-
-Utilisez un tunnel type [webhook.site](https://webhook.site) ou [ngrok](https://ngrok.com),
-puis ajoutez l'URL dans **Dashboard → Webhooks**. Le secret de signature vous est affiché une seule fois.
-
-## 🧪 Tester
-
-```bash
-npm test          # 10 tests E2E : auth, paiements, idempotence, sandbox,
-                  # checkout complet, webhooks signés (HMAC vérifié)
-```
-
-## 🏗 Architecture
-
-```
-cauripay/
-├── server/        Fastify 5 + TypeScript + node:sqlite (zéro dépendance native)
-│   ├── src/       API marchand (/api), API développeur (/api/v1), checkout (/checkout)
-│   │              simulateur sandbox, dispatcher webhooks (HMAC + retries)
-│   └── test/      tests E2E (node:test)
-├── dashboard/     React 18 + Vite + TypeScript (SPA, design system maison)
-└── docs/          DESIGN.md (conception complète), API.md (référence), ROADMAP.md
-```
-
-En production, `npm run build && npm start` : le serveur sert l'API **et** le dashboard compilé sur le port 4000.
-
-## 📚 Documentation
-
-- [docs/DESIGN.md](docs/DESIGN.md) — dossier de conception (vision, marché, sécurité, conformité, monétisation)
-- [docs/API.md](docs/API.md) — référence API v1 complète
-- [docs/ROADMAP.md](docs/ROADMAP.md) — v0.1 → v0.4 (vrais PSP, SDK mobile, reversements, agréments)
-
-## 🔒 Sécurité (v0.1)
-
-- Mots de passe hachés (scrypt), JWT 7 jours pour le dashboard
-- Clés secrètes renvoyées uniquement au marchand authentifié (comme Stripe)
-- Webhooks signés HMAC-SHA256 (`t + "." + body`), anti-replay ±5 min
-- **Aucune donnée de carte stockée** (méthode `card` simulée) — posture PCI-DSS par conception
-- Rate limiting global (@fastify/rate-limit)
-
-## 🗺 Vers la production (v0.2)
-
-Brancher les vrais PSP via l'interface provider du simulateur : Orange Money API, MTN MoMo API,
-CinetPay, Flutterwave, Thunes (international) → mode live → KYC/AML → agréments BCEAO/COBAC.
-Voir [docs/ROADMAP.md](docs/ROADMAP.md).
+- **CI** (`.github/workflows/ci.yml`) : lint + tsc + jest (TS) **et** mvn test (Java) sur chaque PR.
+- **Sécurité** (`.github/workflows/security-scan.yml`) : gitleaks (secrets) + trivy (images CRITICAL/HIGH).
+- **DoD MVP 10/10** : checklist prouvée dans [docs/DESIGN-v2.md §8](docs/DESIGN-v2.md).
+- Règles de contribution : [docs/REVUE-CONSTITUTION.md §4](docs/REVUE-CONSTITUTION.md).
 
 ## 📄 Licence
 
