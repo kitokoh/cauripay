@@ -1,0 +1,31 @@
+{
+  "name": "@goursi/web-business",
+  "version": "0.1.0",
+  "private": true,
+  "description": "web-business — portail entreprises (port 3002) : paiements, bulk, rapports, réglages. 2FA TOTP obligatoire.",
+  "scripts": {
+    "dev": "next dev -p 3002",
+    "build": "next build",
+    "start": "next start -p 3002",
+    "lint": "eslint \"app/**/*.tsx\" \"lib/**/*.ts\" --max-warnings 0",
+    "typecheck": "tsc --noEmit",
+    "test": "jest"
+  },
+  "dependencies": {
+    "next": "^14.2.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "openid-client": "^5.7.0",
+    "otplib": "^12.0.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.10.1",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.6.3"
+  },
+  "engines": { "node": ">=20.0.0" }
+}
