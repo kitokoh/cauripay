@@ -6,19 +6,51 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
+  lint:
+    name: Lint TS (eslint + prettier + tsc)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
           cache: npm
       - run: npm ci
-      - name: Build serveur
-        run: npm -w server run build
-      - name: Tests E2E
-        run: npm test
-      - name: Build dashboard
-        run: npm -w dashboard run build
+      - name: ESLint
+        run: npx eslint . --max-warnings 0
+      - name: Prettier check
+        run: npx prettier --check .
+      - name: TypeScript (tsc --noEmit, monorepo)
+        run: npm run typecheck
+
+  test-ts:
+    name: Tests TS (Jest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Tests Jest (workspaces)
+        run: npm test --workspaces --if-present
+
+  test-java:
+    name: Tests Java (Maven ledger)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+      - name: Maven verify (ledger-service)
+        run: mvn -B verify --file services/ledger-service/pom.xml
+        working-directory: services/ledger-service

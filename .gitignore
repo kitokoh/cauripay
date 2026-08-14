@@ -1,22 +1,42 @@
 # Dépendances
 node_modules/
+.pnp
+.pnp.js
 
 # Builds
 dist/
 build/
+*.tsbuildinfo
+target/
+*.jar
+*.war
 
 # Env & secrets
 .env
 .env.*
 !.env.example
-.gh-token
+!.env.test.example
+*.pem
+*.key
+*.p12
 
 # Base de données locale
-data/*.db
-data/*.db-*
+data/
+*.db
+*.db-*
 
 # Outils
 .claude/
 .DS_Store
 *.log
 coverage/
+.nyc_output/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Rapports
+reports/
+.env-local

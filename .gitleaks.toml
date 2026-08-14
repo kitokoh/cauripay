@@ -1,0 +1,29 @@
+# Gitleaks — configuration CauriPay
+# Aucun secret committé. Patterns additionnels au-delà des règles par défaut.
+
+title = "CauriPay gitleaks config"
+
+[extend]
+useDefault = true
+
+# Secrets d'infra/dev connus — les autoriser explicitement éviterait le scan ;
+# au contraire, on refuse les exemples type "change-me" uniquement hors tests.
+[[rules]]
+id = "cauripay-internal-service-key-example"
+description = "Valeur d'exemple INTERNAL_SERVICE_KEY (dev uniquement)"
+regex = '''dev-internal-service-key-change-me'''
+secret-group = 0
+[allowlist]
+description = "Fixture de test explicite"
+paths = [
+  '''.*\.test\.example''',
+  '''.*/__tests__/.*''',
+  '''.*/test/.*''',
+]
+
+[[allowlist]]
+description = "Fichiers d'exemple .env (aucun secret réel)"
+paths = [
+  '''\.env\.example$''',
+  '''\.env\.test\.example$''',
+]
