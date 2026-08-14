@@ -1,0 +1,61 @@
+// aml-service — schéma Prisma (schéma/db `goursi_aml`).
+// Propriété : aml-service uniquement (ADR-001).
+// AmlAlert : alertes de risque ; SanctionedParty : listes OFAC/ONU/GABAC (fixtures).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("AML_DATABASE_URL")
+}
+
+enum AlertStatus {
+  OPEN
+  IN_REVIEW
+  CONFIRMED
+  FALSE_POSITIVE
+}
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum SanctionsList {
+  OFAC
+  UN
+  GABAC
+}
+
+model AmlAlert {
+  id          String        @id @default(uuid())
+  transactionId String?
+  userId      String?
+  riskScore   Int
+  alertType   String // RISK_SCORE | SANCTIONS_MATCH
+  severity    AlertSeverity @default(MEDIUM)
+  status      AlertStatus   @default(OPEN)
+  comment     String?
+  decidedBy   String?
+  decidedAt   DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([status, severity])
+  @@index([createdAt])
+}
+
+model SanctionedParty {
+  id             String        @id @default(uuid())
+  name           String
+  normalizedName String        @unique
+  country        String?
+  listSource     SanctionsList
+  createdAt      DateTime      @default(now())
+
+  @@index([normalizedName])
+}
