@@ -168,7 +168,14 @@ export function renderCheckout(pay: PaymentRow, merchantName: string, merchantCo
   if (${initial}) return;
   const methods = document.querySelectorAll('.method');
   let selected = ${JSON.stringify(allowed[0] ?? null)};
-  methods.forEach(b => { if (b.dataset.method === selected) b.classList.add('sel'); b.onclick = () => { methods.forEach(x => x.classList.remove('sel'); b.classList.add('sel'); selected = b.dataset.method; }; });
+  methods.forEach(b => {
+    if (b.dataset.method === selected) b.classList.add('sel');
+    b.onclick = () => {
+      methods.forEach(x => x.classList.remove('sel'));
+      b.classList.add('sel');
+      selected = b.dataset.method;
+    };
+  });
   const err = (m) => { const e = document.getElementById('error'); e.style.display='block'; e.textContent = m; };
   document.getElementById('btn-pay').onclick = async () => {
     const phone = document.getElementById('phone').value.trim();
@@ -196,7 +203,7 @@ export function renderCheckout(pay: PaymentRow, merchantName: string, merchantCo
   };
   async function poll() {
     for (let i = 0; i < 30; i++) {
-      await new Promise(res => setTimeout(res, 1500);
+      await new Promise(res => setTimeout(res, 1500));
       try {
         const r = await fetch('/checkout/'+token+'/status');
         const j = await r.json();
