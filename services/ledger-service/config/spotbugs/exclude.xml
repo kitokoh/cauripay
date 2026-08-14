@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+  <!-- Faux positifs volontaires pour ce projet -->
+  <Match>
+    <!-- Les entités JPA exposent des champs mappés (getters/setters) — pas un bug de sécurité -->
+    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+  </Match>
+  <Match>
+    <!-- Les records JVM (Java 16+) sont immuables par construction -->
+    <Bug pattern="MC_OVERRIDABLE_METHOD_CALL_IN_CONSTRUCTOR"/>
+  </Match>
+  <Match>
+    <!-- Fail-fast volontaire : le constructeur refuse de démarrer sans
+         INTERNAL_SERVICE_KEY (ServiceKeyFilter) — le "finalizer attack"
+         n'est pas applicable (classe final, pas de ressources). -->
+    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+  </Match>
+  <Match>
+    <!-- Les classes de test ne nécessitent pas de sérialisation -->
+    <Bug pattern="SE_BAD_FIELD"/>
+    <Source name="~.*Test.*"/>
+  </Match>
+</FindBugsFilter>

@@ -22,7 +22,7 @@ down: ## Arrête tout
 
 migrate: migrate-java migrate-prisma ## Exécute toutes les migrations (Flyway + Prisma)
 
-migrate-java: ## Flyway (ledger-service)
+migrate-java: ## Flyway (ledger-service) — lit LEDGER_DATABASE_URL / POSTGRES_USER / POSTGRES_PASSWORD
 	cd services/ledger-service && mvn -q flyway:migrate
 
 migrate-prisma: ## Prisma migrate deploy (tous les services NestJS)

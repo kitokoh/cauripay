@@ -1,0 +1,96 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+    "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+    "https://checkstyle.org/dtds/configuration_1_3.dtd">
+<!--
+  CauriPay — règles Checkstyle (services/ledger-service)
+  Objectif : qualité lisible, sans friction inutile (pas de Javadoc obligatoire).
+-->
+<module name="Checker">
+  <property name="charset" value="UTF-8"/>
+  <property name="severity" value="error"/>
+  <property name="fileExtensions" value="java"/>
+
+  <module name="BeforeExecutionExclusionFileFilter">
+    <property name="fileNamePattern" value="module-info\.java$|.*/target/generated-sources/.*|.*/target/generated-test-sources/.*"/>
+  </module>
+
+  <module name="LineLength">
+    <property name="max" value="120"/>
+    <property name="ignorePattern" value="^import .*|^package .*|//|^\s*\*"/>
+  </module>
+
+  <module name="TreeWalker">
+    <!-- Imports -->
+    <module name="UnusedImports"/>
+    <module name="RedundantImport"/>
+    <module name="AvoidStarImport"/>
+
+    <!-- Style -->
+    <module name="IllegalTokenText">
+      <property name="tokens" value="STRING_LITERAL, CHAR_LITERAL"/>
+      <property name="format" value="\\u00(09|0(a|A)|0(c|C)|0(d|D)|22|27|5(C|c))|\\(0(10|11|12|14|15|42|47)|134)"/>
+      <property name="message" value="Avoid using corresponding octal or Unicode escape."/>
+    </module>
+    <module name="AvoidEscapedUnicodeCharacters">
+      <property name="allowEscapesForControlCharacters" value="true"/>
+    </module>
+    <module name="OneTopLevelClass"/>
+    <module name="NoLineWrap"/>
+    <module name="EmptyBlock">
+      <property name="option" value="TEXT"/>
+      <property name="tokens" value="LITERAL_TRY, LITERAL_FINALLY, LITERAL_IF, LITERAL_ELSE, LITERAL_SWITCH"/>
+    </module>
+    <module name="NeedBraces"/>
+    <module name="LeftCurly"/>
+    <module name="RightCurly">
+      <property name="option" value="same"/>
+    </module>
+    <module name="WhitespaceAfter"/>
+    <module name="WhitespaceAround">
+      <property name="allowEmptyConstructors" value="true"/>
+      <property name="allowEmptyMethods" value="true"/>
+      <property name="allowEmptyTypes" value="true"/>
+      <property name="allowEmptyLoops" value="true"/>
+      <property name="allowEmptyLambdas" value="true"/>
+    </module>
+    <module name="OneStatementPerLine"/>
+    <module name="MultipleVariableDeclarations"/>
+    <module name="ArrayTypeStyle"/>
+    <module name="MissingSwitchDefault"/>
+    <module name="FallThrough"/>
+    <module name="UpperEll"/>
+    <module name="ModifierOrder"/>
+    <module name="EmptyLineSeparator">
+      <property name="allowNoEmptyLineBetweenFields" value="true"/>
+      <property name="tokens" value="IMPORT, CLASS_DEF, INTERFACE_DEF, ENUM_DEF, STATIC_INIT, INSTANCE_INIT, METHOD_DEF, CTOR_DEF, VARIABLE_DEF"/>
+    </module>
+    <module name="SeparatorWrap">
+      <property name="tokens" value="DOT"/>
+      <property name="option" value="nl"/>
+    </module>
+
+    <!-- Naming -->
+    <module name="TypeName"/>
+    <module name="MemberName"/>
+    <module name="ParameterName"/>
+    <module name="LambdaParameterName"/>
+    <module name="LocalVariableName"/>
+    <module name="ClassTypeParameterName"/>
+    <module name="MethodTypeParameterName"/>
+    <module name="InterfaceTypeParameterName"/>
+    <module name="ConstantName"/>
+    <module name="StaticVariableName"/>
+    <module name="PackageName">
+      <property name="format" value="^[a-z]+(\.[a-z][a-z0-9]*)*$"/>
+    </module>
+    <module name="MethodName"/>
+    <module name="IllegalThrows">
+      <property name="illegalClassNames" value="java.lang.Throwable"/>
+    </module>
+    <module name="DefaultComesLast"/>
+    <module name="InnerAssignment"/>
+    <module name="SimplifyBooleanExpression"/>
+    <module name="SimplifyBooleanReturn"/>
+  </module>
+</module>

@@ -67,10 +67,15 @@ jobs:
           distribution: temurin
           java-version: 21
           cache: maven
-      - name: Maven test (exécution)
+      - name: Maven verify — tests + Checkstyle + SpotBugs + package
         if: steps.pom.outputs.exists == 'true'
         working-directory: services/ledger-service
-        run: mvn -B -q test
+        run: mvn -B -ntp verify
+
+      - name: Tests d'intégration (Testcontainers — Postgres 16 + Redis 7)
+        if: steps.pom.outputs.exists == 'true'
+        working-directory: services/ledger-service
+        run: mvn -B -ntp verify -Pit
 
   legacy:
     name: Tests legacy v0.1 (archivé)
