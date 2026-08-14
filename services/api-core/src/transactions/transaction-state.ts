@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { ConflictException } from '@nestjs/common';
 import { TransactionStatus } from '@goursi/shared-types';
 
 /**
@@ -17,7 +17,7 @@ const VALID_TRANSITIONS: Record<TransactionStatus, TransactionStatus[]> = {
 export function assertTransition(from: TransactionStatus, to: TransactionStatus): void {
   const allowed = VALID_TRANSITIONS[from] ?? [];
   if (!allowed.includes(to)) {
-    throw new BadRequestException({
+    throw new ConflictException({
       code: 'INVALID_TRANSITION',
       message: `Transition ${from} → ${to} interdite`,
       details: { from, to },
