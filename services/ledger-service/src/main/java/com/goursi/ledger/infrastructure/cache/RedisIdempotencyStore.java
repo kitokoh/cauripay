@@ -44,4 +44,9 @@ public class RedisIdempotencyStore {
   public void delete(String idempotencyKey) {
     redis.delete(key(idempotencyKey));
   }
+
+  /** TTL restant de la clé en secondes (assertions de test). */
+  public Long getTtlSeconds(String idempotencyKey) {
+    return redis.getExpire(key(idempotencyKey), java.util.concurrent.TimeUnit.SECONDS);
+  }
 }
