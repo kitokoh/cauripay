@@ -10,9 +10,9 @@
 | 3 | Trigger d'immutabilité : `UPDATE ledger_entries` → « Opération interdite » | `MigrationIntegrityTest` + `scripts/audit/check_immutability.sql` | ✅ G1 mergé (#295) + audit CI (GOURSI-QA2) |
 | 4 | Équilibre comptable : `SUM(CREDIT)-SUM(DEBIT)` = 0 (0 écart) | `scripts/audit/check_balance.sql` + job CI `audit-sql` | ✅ audit CI (GOURSI-QA2) |
 | 5 | P2P de bout en bout < 10 s | test E2E api-core (GOURSI-023i) — **à prouver quand G2 mergé** | ⬜ bloqué G2 |
-| 6 | Inscription + KYC < 3 min | test de parcours kyc-service (GOURSI-024) | ⬜ bloqué G2 |
+| 6 | Inscription + KYC < 3 min | kyc-service (#318) : soumission AES-256, workflow approve/reject, file compliance + 6 tests | ✅ kyc-service mergé (#318) |
 | 7 | **1000 tx/min** (k6, p95 < 2 s, erreur < 0,1 %) | `tests/load/p2p-1000tpm.js` (GOURSI-QA1) — exécution sur staging quand G2 mergé | ⬜ script prêt, exécution bloquée G2 |
-| 8 | USSD : **4 opérations** fonctionnelles sur simulateur | simulateur + tests (GOURSI-027d) | ⬜ bloqué G2 |
+| 8 | USSD : **4 opérations** fonctionnelles sur simulateur | ussd-service (GOURSI-027d) : sessions TTL 180 s, menu FR+AR, simulateur solde/envoi/facture/retrait — 7 tests | ✅ PR #325 (lead) |
 | 9 | **gitleaks 0** finding | security-scan CI (job Gitleaks) — vérifié sur chaque PR | ✅ CI active |
 | 10 | **ZAP 0** vulnérabilité critique résiduelle | `tests/security/zap-baseline` (GOURSI-QA3) — exécution sur staging | ⬜ config prête, exécution bloquée G2 |
 
