@@ -51,6 +51,5 @@ jobs:
           distribution: temurin
           java-version: 21
           cache: maven
-      - name: Maven verify (ledger-service)
-        run: mvn -B verify --file services/ledger-service/pom.xml
-        working-directory: services/ledger-service
+      - name: Maven verify (ledger-service, tests + intégration Testcontainers)
+        run: mvn -B verify -Pintegration --file services/ledger-service/pom.xml

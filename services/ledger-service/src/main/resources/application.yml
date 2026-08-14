@@ -1,0 +1,55 @@
+server:
+  port: ${LEDGER_PORT:3010}
+
+spring:
+  application:
+    name: ledger-service
+  datasource:
+    url: ${LEDGER_DATABASE_URL:jdbc:postgresql://localhost:5432/cauripay}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      pool-name: ledger-hikari
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: ledger
+        jdbc:
+          time_zone: UTC
+  flyway:
+    schemas: ledger
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+  data:
+    redis:
+      url: ${REDIS_URL:redis://localhost:6379}
+  rabbitmq:
+    addresses: ${RABBITMQ_URL:amqp://guest:guest@localhost:5672}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: never
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+goursi:
+  internal:
+    service-key: ${INTERNAL_SERVICE_KEY:dev-internal-service-key-change-me}
+  ledger:
+    idempotency-ttl-hours: ${IDEMPOTENCY_TTL_HOURS:24}
+    checkpoint-cron: ${CHECKPOINT_CRON:0 0 2 * * *}
+
+logging:
+  level:
+    com.goursi.ledger: DEBUG
+    org.hibernate.SQL: WARN
