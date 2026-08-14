@@ -1,0 +1,34 @@
+# CauriPay — Configuration Prometheus
+# Cibles : services sur le réseau Docker cauripay-net.
+# Aucune donnée personnelle exposée (pas de numéros, pas de montants par client).
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'ledger-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['ledger-service:8081']
+
+  - job_name: 'api-core'
+    static_configs:
+      - targets: ['api-core:3000']
+
+  - job_name: 'business-service'
+    static_configs:
+      - targets: ['business-service:3001']
+
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres:9187'] # postgres-exporter (optionnel)
+
+  - job_name: 'rabbitmq'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['rabbitmq:15692'] # rabbitmq_prometheus

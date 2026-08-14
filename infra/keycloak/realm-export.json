@@ -1,0 +1,79 @@
+{
+  "realm": "goursi",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "failureFactor": 30,
+  "roles": {
+    "realm": [
+      { "name": "CUSTOMER", "description": "Client portefeuille" },
+      { "name": "MERCHANT", "description": "Marchand (business-service)" },
+      { "name": "AGENT", "description": "Agent de distribution" },
+      { "name": "DISTRIBUTOR", "description": "Distributeur" },
+      { "name": "SUPER_ADMIN", "description": "Administrateur plateforme" },
+      { "name": "COMPLIANCE_OFFICER", "description": "Validation KYC/AML" },
+      { "name": "SUPPORT_L1", "description": "Support niveau 1" },
+      { "name": "SUPPORT_L2", "description": "Support niveau 2 (réversements)" },
+      { "name": "FINANCE_MANAGER", "description": "Gestion financière" },
+      { "name": "OPS_AGENT_MANAGER", "description": "Supervision agents" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "api-core",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "standardFlowEnabled": true,
+      "serviceAccountsEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "secret": "dev-only-client-secret",
+      "redirectUris": ["http://localhost:3000/*"],
+      "webOrigins": ["http://localhost:3000"]
+    },
+    {
+      "clientId": "web-admin",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://localhost:4000/*"],
+      "webOrigins": ["http://localhost:4000"]
+    },
+    {
+      "clientId": "web-business",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://localhost:5000/*"],
+      "webOrigins": ["http://localhost:5000"]
+    }
+  ],
+  "defaultRoles": ["CUSTOMER"],
+  "users": [
+    {
+      "username": "admin@cauripay.test",
+      "email": "admin@cauripay.test",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        { "type": "password", "value": "admin123", "temporary": false }
+      ],
+      "realmRoles": ["SUPER_ADMIN", "CUSTOMER"]
+    }
+  ]
+}

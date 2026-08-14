@@ -1,0 +1,55 @@
+{
+  "uid": "cauripay-overview",
+  "title": "CauriPay — Vue d'ensemble",
+  "tags": ["cauripay"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Latence API (p95) — api-core",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Erreurs ledger (taux)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "rate(ledger_errors_total[5m])",
+          "legendFormat": "erreurs/s"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Services UP",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "up",
+          "legendFormat": "{{job}}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Files RabbitMQ (profondeur)",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 8 },
+      "targets": [
+        {
+          "expr": "rabbitmq_queue_messages",
+          "legendFormat": "{{queue}}"
+        }
+      ]
+    }
+  ]
+}
