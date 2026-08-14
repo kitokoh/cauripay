@@ -1,21 +1,26 @@
-import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { NestFactory } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  app.setGlobalPrefix('api/v1');
+/**
+ * aml-service — point d'entrée (GOURSI-025a). Port 3040 (ADR-004).
+ */
+async function bootstrap(): Promise<void> {
+  const app = await NestFactory.create(AppModule, {
+    logger: process.env.LOG_LEVEL === 'debug' ? ['log', 'error', 'warn', 'debug', 'verbose'] : ['log', 'error', 'warn'],
+  });
+  const config = app.get(ConfigService);
+
+  app.use(helmet());
+  app.enableCors({ origin: false });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-  const config = new DocumentBuilder()
-    .setTitle('CauriPay aml-service')
-    .setDescription('Scoring de risque, listes OFAC/ONU/GABAC, alertes, gel wallet')
-    .setVersion('0.1.0')
-    .build();
-  SwaggerModule.setup('api/v1/docs', app, SwaggerModule.createDocument(app, config));
-  const port = Number(process.env.AML_PORT ?? 3003);
-  await app.listen(port);
+
+  const port = config.getOrThrow<number>('PORT');
+  await app.listen(port, '0.0.0.0');
   // eslint-disable-next-line no-console
-  console.log(`aml-service démarré sur http://localhost:${port}/api/v1`);
+  console.log(`aml-service démarré sur http://localhost:${port} (health : /health)`);
 }
+
 void bootstrap();

@@ -1,92 +1,123 @@
-import { Injectable } from '@nestjs/common';
-
-export interface Alert {
-  id: string;
-  userId: string;
-  score: number;
-  reason: string;
-  status: 'OPEN' | 'REVIEW' | 'CONFIRMED' | 'FALSE_POSITIVE';
-  matchedLists: string[];
-  createdAt: Date;
-}
+import { Injectable, Logger } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { RiskScorerService } from '../scoring/risk-scorer.service';
+import { ListScreenerService } from '../screening/list-screener.service';
+import { AmlEventPublisher } from '../rabbit/aml-event.publisher';
+import type { FinancialEvent } from '../rabbit/financial-event.types';
 
 /**
- * aml-service — scoring de risque (0-100, seuil 70), filtrage listes
- * OFAC/ONU/GABAC et workflow des alertes. En phase 0 : liste de sanctions
- * embarquée (fixtures) + stockage mémoire ; en staging : source externe.
+ * Orchestration AML (GOURSI-025) :
+ *   financial.events → screening parties → scoring → AmlAlert si score > 70
+ *   ou match sanctions exact → alerte CRITIQUE + événement aml.alert.created
+ *   (consommé par api-core → gel wallet, GOURSI-025d).
  */
 @Injectable()
 export class AmlService {
-  private static readonly THRESHOLD = 70;
+  private readonly logger = new Logger(AmlService.name);
 
-  // Fixtures minimales (noms de test) — remplacées par un flux réel en staging
-  private static readonly SANCTIONED_NAMES = new Set([
-    'GABAC-TEST-PERSON',
-    'OFAC-TEST-PERSON',
-    'ONU-TEST-PERSON',
-  ]);
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly scorer: RiskScorerService,
+    private readonly screener: ListScreenerService,
+    private readonly publisher: AmlEventPublisher,
+  ) {}
 
-  private readonly alerts = new Map<string, Alert>();
+  /** Analyse un événement financier (transaction.completed/failed/reversed). */
+  async analyze(event: FinancialEvent): Promise<{ alertCreated: boolean; alertId?: string }> {
+    const senderName = event.senderName;
+    const recipientName = event.recipientName;
 
-  /** Score un utilisateur : 0-100. ≥70 → alerte. */
-  scoreUser(dto: {
-    userId: string;
-    fullName: string;
-    country: string;
-    transactionVolumeMinor: number;
-  }): {
-    score: number;
-    alert?: Alert;
-  } {
-    let score = 0;
-    const matchedLists: string[] = [];
+    const senderHit = senderName ? this.screener.screen(senderName, event.senderCountry) : null;
+    const recipientHit = recipientName ? this.screener.screen(recipientName, event.recipientCountry) : null;
+    const worstHit = [senderHit, recipientHit].find((h) => h?.hit) ?? null;
 
-    const upper = dto.fullName.toUpperCase();
-    if (AmlService.SANCTIONED_NAMES.has(upper)) {
-      score += 90;
-      matchedLists.push('GABAC');
-    }
-    if (dto.country.toUpperCase() === 'IR' || dto.country.toUpperCase() === 'KP') {
-      score += 40;
-      matchedLists.push('OFAC');
-    }
-    // Volume élevé sur petit compte → signal
-    if (dto.transactionVolumeMinor > 10_000_000) {
-      score += 20;
+    const todayCount = await this.todayTransactionCount(event.transactionId);
+    const score = this.scorer.score({
+      transactionId: event.transactionId,
+      amountMinor: event.amountMinor ?? '0',
+      type: event.type ?? 'P2P',
+      country: worstHit?.matchedEntity?.country,
+      method: event.method,
+      todayCount,
+      sanctionsHit: worstHit ? { kind: worstHit.kind!, country: worstHit.matchedEntity?.country } : null,
+    });
+
+    // Alerte si score > 70, OU match exact sanctions (toujours critique).
+    const critical = worstHit?.kind === 'exact';
+    if (!score.alert && !critical) {
+      return { alertCreated: false };
     }
 
-    score = Math.min(100, score);
-    if (score >= AmlService.THRESHOLD) {
-      const alert: Alert = {
-        id: `al_${globalThis.crypto.randomUUID().slice(0, 8)}`,
-        userId: dto.userId,
-        score,
-        reason: `Score AML ${score}/100 — seuil ${AmlService.THRESHOLD}`,
+    const severity = critical ? 'CRITICAL' : score.score >= 85 ? 'HIGH' : 'MEDIUM';
+    const alert = await this.prisma.amlAlert.create({
+      data: {
+        transactionId: event.transactionId,
+        riskScore: score.score,
+        severity: severity as never,
+        reason: score.reasons.join(', '),
         status: 'OPEN',
-        matchedLists,
-        createdAt: new Date(),
-      };
-      this.alerts.set(alert.id, alert);
-      return { score, alert };
+      },
+    });
+
+    await this.publisher.publishAlertCreated({
+      alertId: alert.id,
+      transactionId: event.transactionId,
+      severity,
+      riskScore: score.score,
+      walletIds: event.walletIds ?? [],
+      freeze: critical || score.score >= 85,
+    });
+
+    this.logger.warn(
+      `AmlAlert ${alert.id} (${severity}, score ${score.score}) pour ${event.transactionId} — ${score.reasons.join(', ')}`,
+    );
+    return { alertCreated: true, alertId: alert.id };
+  }
+
+  /** Liste des alertes (back-office compliance) — filtrable. */
+  listAlerts(opts: { status?: string; severity?: string; limit: number; before?: string }) {
+    const where: Record<string, unknown> = {};
+    if (opts.status) where.status = opts.status;
+    if (opts.severity) where.severity = opts.severity;
+    if (opts.before) where.id = { lt: opts.before } as never;
+    return this.prisma.amlAlert.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: Math.min(Math.max(opts.limit || 50, 1), 200),
+      include: { actions: { orderBy: { createdAt: 'desc' } } },
+    });
+  }
+
+  /** Workflow d'action (review/confirm/false_positive) — commentaire obligatoire, audit. */
+  async actOnAlert(alertId: string, action: 'REVIEW' | 'CONFIRM' | 'FALSE_POSITIVE', comment: string, actorId?: string) {
+    if (!comment || comment.trim().length < 5) {
+      throw new Error('AML_COMMENT_REQUIRED');
     }
-    return { score };
+    const alert = await this.prisma.amlAlert.findUnique({ where: { id: alertId } });
+    if (!alert) throw new Error('AML_ALERT_NOT_FOUND');
+
+    const nextStatus = action === 'FALSE_POSITIVE' ? 'FALSE_POSITIVE' : action === 'CONFIRM' ? 'CONFIRMED' : 'REVIEWED';
+
+    const [, updated] = await this.prisma.$transaction([
+      this.prisma.amlAction.create({
+        data: { alertId, action, comment: comment.trim(), actorId },
+      }),
+      this.prisma.amlAlert.update({
+        where: { id: alertId },
+        data: { status: nextStatus as never, comment: comment.trim(), createdBy: actorId },
+      }),
+    ]);
+
+    if (action === 'CONFIRM' || action === 'FALSE_POSITIVE') {
+      // Le back-office tranche → événement pour api-core (mise à jour Transaction associée).
+      await this.publisher.publishAlertResolved({ alertId, transactionId: alert.transactionId, resolution: action });
+    }
+    return updated;
   }
 
-  /** Workflow alertes : OPEN → REVIEW → CONFIRMED | FALSE_POSITIVE. */
-  updateAlert(
-    alertId: string,
-    action: 'review' | 'confirm' | 'false_positive',
-    _reviewerId: string,
-  ): Alert {
-    const alert = this.alerts.get(alertId);
-    if (!alert) throw new Error(`Alerte inconnue: ${alertId}`);
-    alert.status =
-      action === 'review' ? 'REVIEW' : action === 'confirm' ? 'CONFIRMED' : 'FALSE_POSITIVE';
-    return alert;
-  }
-
-  listAlerts(status?: Alert['status']): Alert[] {
-    const all = [...this.alerts.values()];
-    return status ? all.filter((a) => a.status === status) : all;
+  private async todayTransactionCount(_transactionId: string): Promise<number> {
+    // À terme : comptage des transactions du wallet sur la journée (via ledger/api-core).
+    // En l'état, fréquence inconnue → 0 (le scoring reste déterministe et testable).
+    return 0;
   }
 }

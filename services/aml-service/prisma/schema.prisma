@@ -1,0 +1,55 @@
+// GOURSI — aml-service : alertes AML + audit des actions compliance.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/.prisma/aml-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("AML_DATABASE_URL")
+}
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AlertStatus {
+  OPEN
+  REVIEWED
+  CONFIRMED
+  FALSE_POSITIVE
+}
+
+model AmlAlert {
+  id             String        @id @default(uuid())
+  transactionId  String        @unique
+  riskScore      Int           // 0-100 (GOURSI-025a, seuil 70)
+  severity       AlertSeverity @default(HIGH)
+  status         AlertStatus   @default(OPEN)
+  reason         String        // motifs concaténés (règles déclenchées, screening)
+  comment        String?
+  createdBy      String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  actions        AmlAction[]
+
+  @@index([status, createdAt])
+  @@index([severity])
+}
+
+model AmlAction {
+  id         String      @id @default(uuid())
+  alertId    String
+  alert      AmlAlert    @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  action     String      // REVIEW | CONFIRM | FALSE_POSITIVE
+  comment    String      // obligatoire (GOURSI-025c)
+  actorId    String?
+  createdAt  DateTime    @default(now())
+
+  @@index([alertId, createdAt])
+}
