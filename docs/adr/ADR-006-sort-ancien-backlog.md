@@ -1,4 +1,4 @@
-# ADR-005 — Sort de l'ancien backlog (137 issues)
+# ADR-006 — Sort de l'ancien backlog (137 issues)
 
 - **Statut** : Adopté · 2026-08-14
 - **Issue** : GOURSI-ADR1 (#267), GOURSI-QA7 (#268)
