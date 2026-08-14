@@ -2,7 +2,7 @@ import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypt
 import jwt from 'jsonwebtoken';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { config } from './config.js';
-import { db, qall, qget, qrun } from './db.js';
+import { qget } from './db.js';
 
 // ---------- Mots de passe (scrypt natif) ----------
 

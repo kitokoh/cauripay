@@ -1,0 +1,61 @@
+name: Bug report
+description: Signaler un comportement incorrect
+title: "BUG : "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: attente
+    attributes:
+      label: Comportement attendu
+      description: Ce qui devrait se passer.
+    validations:
+      required: true
+  - type: textarea
+    id: constate
+    attributes:
+      label: Comportement constaté
+      description: Ce qui se passe réellement (erreur, trace, capture).
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Étapes de reproduction
+      placeholder: |
+        1. Créer un paiement avec …
+        2. Appeler …
+        3. …
+    validations:
+      required: true
+  - type: dropdown
+    id: zone
+    attributes:
+      label: Zone concernée
+      options:
+        - area:api
+        - area:checkout
+        - area:webhooks
+        - area:dashboard
+        - area:auth
+        - area:connectors
+        - area:infra
+        - area:database
+        - docs
+    validations:
+      required: true
+  - type: dropdown
+    id: priorite
+    attributes:
+      label: Priorité
+      options:
+        - prio:critical
+        - prio:high
+        - prio:medium
+        - prio:low
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Environnement
+      description: Node, OS, mode (test/live), etc.

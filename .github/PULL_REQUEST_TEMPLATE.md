@@ -16,13 +16,12 @@ Closes #<!-- numéro de l'issue -->
 ## Checklist
 
 - [ ] Conventional commit respecté (type(scope): description)
-- [ ] Branche nommée selon la convention (feat/GOURSI-XXX-…)
-- [ ] CI verte (lint, build, tests TS, tests Java, gitleaks)
+- [ ] Branche nommée selon la convention (fix/…, feat/…, chore/…, docs/…)
+- [ ] CI verte (`npm run check` : lint + build + tests)
 - [ ] Tests ajoutés/mis à jour si comportement changé
 - [ ] Documentation mise à jour si nécessaire (README, docs/)
+- [ ] Aucun secret dans le diff
 
 ## Tests effectués
 
 <!-- Commandes exécutées et résultats -->
-
-## Capture d'écran (si UI)

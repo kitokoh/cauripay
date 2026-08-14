@@ -133,7 +133,6 @@ test('cycle complet : approve → succeeded + webhook signé reçu', async () =>
   assert.ok(evt, 'webhook payment.succeeded reçu');
 
   // vérifier la signature HMAC
-  const [, sig] = evt.signature.split(',');
   const [t, v1] = evt.signature.match(/t=(\d+),v1=([0-9a-f]+)/)!.slice(1);
   const expected = createHmac('sha256', wsec).update(`${t}.${evt.raw}`).digest('hex');
   assert.equal(v1, expected);

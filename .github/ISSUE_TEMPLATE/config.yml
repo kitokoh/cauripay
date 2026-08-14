@@ -1,5 +1,8 @@
-blank_issues_enabled: true
+blank_issues_enabled: false
 contact_links:
+  - name: Problème de sécurité
+    url: https://github.com/kitokoh/cauripay/security/advisories/new
+    about: Ne créez pas d'issue publique pour un secret ou une vulnérabilité — voir SECURITY.md
   - name: Discussions
     url: https://github.com/kitokoh/cauripay/discussions
     about: Questions générales, idées, discussions produit.

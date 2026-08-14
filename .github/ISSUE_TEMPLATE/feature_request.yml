@@ -1,0 +1,41 @@
+name: Demande de fonctionnalité
+description: Suggérer une amélioration ou une nouvelle capacité
+title: "FEAT : "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: probleme
+    attributes:
+      label: Problème / besoin
+      description: Qu'est-ce qui manque et pourquoi ?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Solution proposée
+      description: Comportement, contrat API, UI attendus.
+  - type: dropdown
+    id: zone
+    attributes:
+      label: Zone concernée
+      options:
+        - area:api
+        - area:checkout
+        - area:webhooks
+        - area:dashboard
+        - area:auth
+        - area:connectors
+        - area:sdk
+        - area:infra
+        - area:database
+        - area:compliance
+        - docs
+    validations:
+      required: true
+  - type: checkboxes
+    id: parallel
+    attributes:
+      label: Indépendance
+      options:
+        - label: "Cette issue est `parallel` : un dev peut la traiter sans dépendre d'une autre issue."

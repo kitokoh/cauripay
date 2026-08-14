@@ -1,0 +1,27 @@
+# CauriPay — stack locale / déploiement simple
+# Usage : cp .env.example .env && docker compose up --build
+services:
+  api:
+    build: .
+    container_name: cauripay-api
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 4000
+      HOST: 0.0.0.0
+      JWT_SECRET: ${JWT_SECRET:?Définissez JWT_SECRET dans .env (openssl rand -hex 32)}
+      DATABASE_PATH: /app/data/cauripay.db
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:4000}
+    volumes:
+      - cauripay-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+volumes:
+  cauripay-data:

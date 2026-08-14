@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { apiV1, request, type Payment, type PaymentStatus } from '../api';
+import { apiV1, type Payment } from '../api';
 import { CURRENCIES, METHODS, formatDate, formatMoney, shortId } from '../format';
 import { PageHead } from '../components/Layout';
 import { EmptyState, Spinner } from '../components/StatCard';
@@ -15,12 +15,12 @@ export function PaymentsPage(): JSX.Element {
   const [showNew, setShowNew] = useState(params.get('new') === '1');
 
   const load = () => {
+    setPayments(null);
     const q = status ? `?status=${status}` : '';
     apiV1<{ payments: Payment[] }>(`/payments${q}`).then((r) => setPayments(r.payments)).catch(() => setPayments([]));
   };
 
   useEffect(() => {
-    setPayments(null);
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);

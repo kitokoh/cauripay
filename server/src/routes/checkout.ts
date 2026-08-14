@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { db, qall, qget, qrun } from '../db.js';
+import { qget } from '../db.js';
 import { getPaymentByCheckoutToken, transition, type PaymentRow } from '../payments.js';
 import { formatMoney, isValidPhone } from '../util.js';
 import { methodById, ALL_METHOD_IDS } from '../registries.js';

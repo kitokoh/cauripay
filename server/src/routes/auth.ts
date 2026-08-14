@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { db, qall, qget, qrun } from '../db.js';
+import { qget, qrun } from '../db.js';
 import { newId } from '../ids.js';
 import {
   generateApiKey,

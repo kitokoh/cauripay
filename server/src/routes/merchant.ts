@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { db, qall, qget, qrun } from '../db.js';
+import { db, qget, qrun } from '../db.js';
 import { generateApiKey, generateWebhookSecret, requireMerchant } from '../auth.js';
 import { ApiError, createPayment, listPayments, paymentToJson, transition } from '../payments.js';
 import { toIso } from '../util.js';
