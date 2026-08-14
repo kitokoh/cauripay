@@ -4,6 +4,10 @@
 > KYC/AML, paiement de factures, mobile money, USSD, back-offices et developer platform.
 > Le nom vient du **cauri**, coquillage utilisé comme monnaie en Afrique de l'Ouest.
 
+[![CI](https://github.com/kitokoh/cauripay/actions/workflows/ci.yml/badge.svg)](https://github.com/kitokoh/cauripay/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
+
 **Statut : Phase 0 — Fondation & Infrastructure** (voir [docs/DESIGN-v2.md](docs/DESIGN-v2.md)).
 L'ancien agrégateur v0.1 est conservé en historique dans [`legacy/`](legacy/) (voir [ADR-002](docs/adr/ADR-002.md)).
 

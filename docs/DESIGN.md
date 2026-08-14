@@ -287,14 +287,19 @@ Comparatif : Paystack 1,5 % + ₦100 local / 3,9 % intl ; CinetPay mobile money 
 
 ---
 
-## 16. Décisions à valider par l'utilisateur
+## 16. Décisions de conception — statut (document historique, cf. ADR-002)
 
-1. **Nom** : CauriPay ? (alternatives : SavanaPay, KoraPay, Zongopay) — le repo GitHub public sera créé avec le nom retenu.
-2. **Stack** : TypeScript (Fastify + React/Vite) ? — validée par défaut.
-3. **Périmètre v0.1** : sandbox complet (pas d'argent réel) — OK ?
-4. **Monétisation** : commission par transaction (tableau §13) — à ajuster ?
-5. **Licence du dépôt** : MIT (par défaut).
-6. **Devises/méthodes** v0.1 : XOF/XAF/GNF/CDF/NGN/GHS/EUR/USD × orange_money/mtn_momo/moov_money/wave/card/international — OK ?
+> ⚠️ Ce document décrit l'agrégateur **v0.1 (historique)**. La source de vérité courante
+> est [DESIGN-v2.md](DESIGN-v2.md) (plateforme wallet GOURSI, ADR-002).
+
+| # | Décision | Statut |
+|---|---|---|
+| 1 | **Nom** : CauriPay | ✅ Validée (2026-08-14) |
+| 2 | **Stack** : TypeScript (Fastify + React/Vite) | ✅ Validée (2026-08-14) |
+| 3 | **Périmètre v0.1** : sandbox complet | ✅ Validée (2026-08-14) |
+| 4 | **Monétisation** : commission par transaction (§13) | ⏳ À affiner avec kitokoh |
+| 5 | **Licence** : MIT | ✅ Validée (2026-08-14) |
+| 6 | **Devises/méthodes** v0.1 | ✅ Validée (2026-08-14) |
 
 ## 17. Risques & mitigations
 
