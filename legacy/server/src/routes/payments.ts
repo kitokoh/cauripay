@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { requireApiKey } from '../auth.js';
 import { config } from '../config.js';
-import { ApiError, createPayment, getPayment, listPayments, paymentToJson, transition } from '../payments.js';
+import { ApiError, createPayment, getPayment, listPayments, paymentsToJsonMany, paymentToJson, transition } from '../payments.js';
 import { CURRENCIES, METHODS } from '../registries.js';
 
 /** Clé de bucket du rate limit : la clé API elle-même (issue #3). */
@@ -37,7 +37,7 @@ export async function paymentsApiRoutes(app: FastifyInstance): Promise<void> {
     const ctx = req.apiKey!;
     const q = req.query as { status?: string; limit?: string; before?: string };
     const { rows, hasMore } = listPayments(ctx.merchantId, { status: q.status, limit: Number(q.limit) || 25, before: q.before });
-    return { payments: rows.map(paymentToJson), has_more: hasMore };
+    return { payments: paymentsToJsonMany(rows), has_more: hasMore };
   });
 
   app.get('/api/v1/payments/:id', keyed, async (req) => {

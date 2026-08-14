@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { db, qget, qrun } from '../db.js';
 import { requireMerchant } from '../auth.js';
 import { apiKeyHash, generateApiKey, generateWebhookSecret } from '../secrets.js';
-import { ApiError, createPayment, listPayments, paymentToJson, transition, type PaymentRow, type CreatePaymentInput } from '../payments.js';
+import { ApiError, createPayment, listPayments, paymentsToJsonMany, paymentToJson, transition, type PaymentRow, type CreatePaymentInput } from '../payments.js';
 import { maskKey, toIso } from '../util.js';
 
 interface MerchantRow {
@@ -63,7 +63,7 @@ export async function merchantRoutes(app: FastifyInstance): Promise<void> {
   app.get('/api/payments', { preHandler: requireMerchant }, async (req) => {
     const q = req.query as { status?: string; limit?: string; before?: string };
     const { rows, hasMore } = listPayments(req.merchantId!, { status: q.status, limit: Number(q.limit) || 25, before: q.before });
-    return { payments: rows.map(paymentToJson), has_more: hasMore };
+    return { payments: paymentsToJsonMany(rows), has_more: hasMore };
   });
 
   app.get('/api/payments/:id', { preHandler: requireMerchant }, async (req) => {
@@ -147,7 +147,7 @@ export async function merchantRoutes(app: FastifyInstance): Promise<void> {
         success_rate: totals.count > 0 ? totals.succeeded / totals.count : 0,
       },
       by_day: byDay,
-      recent: rows.map(paymentToJson),
+      recent: paymentsToJsonMany(rows),
     };
   });
 }

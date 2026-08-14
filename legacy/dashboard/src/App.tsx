@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { getToken, request, type Merchant } from './api';
+import { loadRegistries } from './registries';
 import { Layout } from './components/Layout';
 import { Toasts } from './components/Toast';
 import { Spinner } from './components/StatCard';
@@ -14,6 +15,8 @@ import { KeysPage } from './pages/KeysPage';
 import { SettingsPage } from './pages/SettingsPage';
 
 export default function App(): JSX.Element {
+  // Registres devises/méthodes : source de vérité = API (issue #46).
+  void loadRegistries();
   return (
     <BrowserRouter>
       <Toasts />

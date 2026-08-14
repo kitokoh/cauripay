@@ -94,6 +94,7 @@ export async function webhookRoutes(app: FastifyInstance): Promise<void> {
         http_status: (a as { http_status: number | null }).http_status,
         attempts: (a as { attempts: number }).attempts,
         last_error: (a as { last_error: string | null }).last_error,
+        next_retry_at: (a as { next_retry_at: string | null }).next_retry_at,
         created_at: (a as { created_at: string }).created_at,
         delivered_at: (a as { delivered_at: string | null }).delivered_at,
       })),

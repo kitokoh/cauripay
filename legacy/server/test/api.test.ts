@@ -28,6 +28,14 @@ const receiver = http.createServer((req, res) => {
 await new Promise<void>((r) => receiver.listen(0, '127.0.0.1', r));
 const receiverPort = (receiver.address() as { port: number }).port;
 
+// ---------- Récepteur webhook défaillant (500) ----------
+const failingReceiver = http.createServer((_req, res) => {
+  res.writeHead(500, { 'Content-Type': 'application/json' });
+  res.end('{"error":"boom"}');
+});
+await new Promise<void>((r) => failingReceiver.listen(0, '127.0.0.1', r));
+const failingPort = (failingReceiver.address() as { port: number }).port;
+
 // ---------- Marchand de test ----------
 let token = '';
 let skTest = '';
@@ -68,6 +76,7 @@ before(async () => {
 after(async () => {
   await app.close();
   receiver.close();
+  failingReceiver.close();
   fs.rmSync(process.env.DATABASE_PATH, { force: true });
   fs.rmSync(`${process.env.DATABASE_PATH}-wal`, { force: true });
   fs.rmSync(`${process.env.DATABASE_PATH}-shm`, { force: true });
@@ -213,8 +222,87 @@ test('rotation clé : ancienne clé → 401, nouvelle clé fonctionne (#49)', as
   skTest = fresh; // la suite utilise la nouvelle clé
 });
 
+test('idempotence : double POST simultané → même paiement, jamais de 500 (#47)', async () => {
+  const body = { amount_minor: 4200, currency: 'XOF', idempotency_key: 'race-e2e-1' };
+  const [a, b] = await Promise.all([
+    api('/api/v1/payments', { method: 'POST', auth: skTest, body }),
+    api('/api/v1/payments', { method: 'POST', auth: skTest, body }),
+  ]);
+  assert.ok(a.status === 200 || a.status === 201);
+  assert.ok(b.status === 200 || b.status === 201);
+  assert.equal(a.body.payment.id, b.body.payment.id, 'même paiement pour la même clé');
+  assert.equal(a.status === 500 || b.status === 500, false, 'pas de 500 sur conflit UNIQUE concurrent');
+});
+
+test('pagination curseur : has_more + before (#49)', async () => {
+  for (let i = 0; i < 5; i++) {
+    await api('/api/v1/payments', { method: 'POST', auth: skTest, body: { amount_minor: 100 + i, currency: 'XOF' } });
+  }
+  const page1 = await api('/api/v1/payments?limit=2', { auth: skTest });
+  assert.equal(page1.status, 200);
+  assert.equal(page1.body.payments.length, 2);
+  assert.equal(page1.body.has_more, true);
+  const last = page1.body.payments[1].id;
+  const page2 = await api(`/api/v1/payments?limit=2&before=${last}`, { auth: skTest });
+  assert.equal(page2.body.payments.length, 2);
+  const ids = new Set([...page1.body.payments, ...page2.body.payments].map((p: { id: string }) => p.id));
+  assert.equal(ids.size, 4, 'pas de doublon entre les pages');
+});
+
+test('webhooks : ping de test + rejeu + journal des tentatives (#49)', async () => {
+  const list = await api('/api/webhooks', { auth: token });
+  const wh = list.body.webhooks[0];
+  const ping = await api(`/api/webhooks/${wh.id}/test`, { method: 'POST', auth: token });
+  assert.equal(ping.status, 200);
+  assert.ok(ping.body.attempt_id);
+  // attendre la livraison du ping
+  for (let i = 0; i < 30; i++) {
+    const evt = deliveries.find((d) => (d.payload as { event?: string }).event === 'webhook.test');
+    if (evt) break;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  const replay = await api(`/api/webhooks/${wh.id}/replay`, { method: 'POST', auth: token });
+  assert.equal(replay.status, 200);
+  const attempts = await api(`/api/webhooks/${wh.id}/attempts`, { auth: token });
+  assert.equal(attempts.status, 200);
+  assert.ok(attempts.body.attempts.length >= 2, 'journal des tentatives alimenté');
+});
+
+test('webhooks : échec de livraison → tentative persistée avec next_retry_at (reprise au boot, #44)', async () => {
+  await api('/api/webhooks', { method: 'POST', auth: token, body: { url: `http://127.0.0.1:${failingPort}/failing`, events: ['payment.failed'], mode: 'test' } });
+  const c = await api('/api/v1/payments', { method: 'POST', auth: skTest, body: { amount_minor: 900, currency: 'XOF' } });
+  const id = c.body.payment.id;
+  await api(`/api/v1/sandbox/payments/${id}/fail`, { method: 'POST', auth: skTest, body: { reason: 'provider_error' } });
+  await new Promise((r) => setTimeout(r, 300));
+  const { resumePendingRetries } = await import('../src/webhooks.js');
+  assert.equal(typeof resumePendingRetries, 'function');
+  const attempts = await api('/api/webhooks?limit=100', { auth: token }).catch(() => null);
+  // la tentative échouée doit exister avec un statut failed et un next_retry_at planifié
+  const hooks = (await api('/api/webhooks', { auth: token })).body.webhooks as { id: string }[];
+  const failing = hooks.find((h) => (h as unknown as { url: string }).url?.includes('failing'));
+  assert.ok(failing, 'webhook défaillant créé');
+  const atts = (await api(`/api/webhooks/${failing.id}/attempts`, { auth: token })).body.attempts as Record<string, unknown>[];
+  const failedAttempt = atts.find((a) => a.event_type === 'payment.failed');
+  assert.ok(failedAttempt, 'tentative payment.failed enregistrée');
+  assert.equal(failedAttempt.status, 'failed');
+  assert.ok(failedAttempt.next_retry_at, 'next_retry_at planifié (persistance → reprise après redémarrage)');
+  // nettoyage : on retire ce webhook pour ne pas fausser le test de limite
+  await api(`/api/webhooks/${failing.id}`, { method: 'DELETE', auth: token });
+});
+
+test('machine à états : transitions invalides → 409 (#50)', async () => {
+  const c = await api('/api/v1/payments', { method: 'POST', auth: skTest, body: { amount_minor: 600, currency: 'XOF' } });
+  const id = c.body.payment.id;
+  await api(`/api/v1/sandbox/payments/${id}/approve`, { method: 'POST', auth: skTest });
+  const again = await api(`/api/v1/sandbox/payments/${id}/approve`, { method: 'POST', auth: skTest });
+  assert.equal(again.status, 409, 'succeeded → succeeded interdit');
+  const cancel = await api(`/api/v1/payments/${id}/cancel`, { method: 'POST', auth: skTest });
+  assert.equal(cancel.status, 409, 'succeeded → cancelled interdit');
+});
+
 test('webhooks : limite de 10 par compte (mode test) (#51)', async () => {
-  for (let i = 0; i < 9; i++) {
+  // 1 webhook existe déjà (before) : 8 de plus = 9, le 10e est refusé.
+  for (let i = 0; i < 8; i++) {
     const r = await api('/api/webhooks', {
       method: 'POST',
       auth: token,

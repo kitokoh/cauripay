@@ -9,6 +9,7 @@ import { webhookRoutes } from './routes/webhooks.js';
 import { paymentsApiRoutes } from './routes/payments.js';
 import { checkoutRoutes } from './routes/checkout.js';
 import { ApiError } from './payments.js';
+import { resumePendingRetries } from './webhooks.js';
 
 export async function buildApp() {
   const app = Fastify({ logger: { level: process.env.LOG_LEVEL || 'info' } });
@@ -58,5 +59,7 @@ export async function buildApp() {
 const isMain = process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop() ?? '');
 if (isMain) {
   const app = await buildApp();
+  const resumed = resumePendingRetries();
+  if (resumed > 0) app.log.info({ resumed }, 'retries webhook repris après redémarrage');
   await app.listen({ port: config.port, host: config.host });
 }
