@@ -15,7 +15,10 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** GOURSI-010c — enveloppe d'erreur structurée : 422 / 409 / 500. */
+/**
+ * GOURSI-010c — enveloppe d'erreur structurée : 422 / 409 / 500.
+ * Enveloppe : {@code { success:false, error:{ code, message, details }, timestamp }}.
+ */
 class GlobalExceptionHandlerTest {
 
   private MockMvc mockMvc;
@@ -62,7 +65,8 @@ class GlobalExceptionHandlerTest {
   void idempotencyConflictMapsTo409() throws Exception {
     mockMvc.perform(post("/stub/conflict"))
         .andExpect(status().isConflict())
-        .andExpect(jsonPath("$.error.code").value("IDEMPOTENCY_CONFLICT"));
+        .andExpect(jsonPath("$.error.code").value("IDEMPOTENCY_CONFLICT"))
+        .andExpect(jsonPath("$.error.details.idempotencyKey").value("key-1"));
   }
 
   @Test

@@ -1,6 +1,6 @@
 package com.goursi.ledger.infrastructure.config;
 
-import java.util.UUID;
+import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,45 +13,43 @@ import org.springframework.stereotype.Component;
  *
  * <p>Refuse de démarrer si une configuration critique est absente, placeholder
  * ou invalide — un service financier ne démarre jamais « en aveugle ».
+ * En dev/test, les contraintes sont assouplies (DX) ; en staging/production,
+ * une clé placeholder ou courte bloque le démarrage.
  */
 @Component
 public class StartupConfigValidator implements ApplicationRunner {
 
   private static final Logger log = LoggerFactory.getLogger(StartupConfigValidator.class);
 
-  private static final String[] PLACEHOLDERS = {"change-me", "changeme", "test", "dev-secret"};
+  private static final String[] PLACEHOLDERS = {"change-me", "changeme", "dev-secret", "test-"};
 
   private final String internalServiceKey;
-  private final String platformFeesWalletId;
   private final String checkpointCron;
 
   public StartupConfigValidator(
-      @Value("${goursi.ledger.internal-service-key}") String internalServiceKey,
-      @Value("${goursi.ledger.platform-fees-wallet-id}") String platformFeesWalletId,
-      @Value("${goursi.ledger.checkpoint-cron}") String checkpointCron) {
+      @Value("${goursi.internal.service-key}") String internalServiceKey,
+      @Value("${goursi.ledger.checkpoint-cron:0 0 2 * * *}") String checkpointCron) {
     this.internalServiceKey = internalServiceKey;
-    this.platformFeesWalletId = platformFeesWalletId;
     this.checkpointCron = checkpointCron;
   }
 
   @Override
   public void run(ApplicationArguments args) {
-    String env = System.getenv("NODE_ENV") != null ? System.getenv("NODE_ENV") : "development";
-    boolean production = "production".equalsIgnoreCase(env) || "staging".equalsIgnoreCase(env);
+    String env = env();
+    boolean strict = "production".equalsIgnoreCase(env) || "staging".equalsIgnoreCase(env);
 
     if (internalServiceKey == null || internalServiceKey.isBlank()) {
       throw new IllegalStateException("FATAL — INTERNAL_SERVICE_KEY manquante : refus de démarrer (GOURSI-SEC1).");
     }
-    if (production && isPlaceholder(internalServiceKey)) {
-      throw new IllegalStateException("FATAL — INTERNAL_SERVICE_KEY placeholder en " + env + " : refus de démarrer.");
+    if (strict && isPlaceholder(internalServiceKey)) {
+      throw new IllegalStateException(
+          "FATAL — INTERNAL_SERVICE_KEY placeholder en " + env + " : refus de démarrer.");
     }
     if (internalServiceKey.length() < 32) {
-      throw new IllegalStateException("FATAL — INTERNAL_SERVICE_KEY trop courte (< 32 caractères).");
-    }
-    try {
-      UUID.fromString(platformFeesWalletId);
-    } catch (IllegalArgumentException e) {
-      throw new IllegalStateException("FATAL — PLATFORM_FEES_WALLET_ID n'est pas un UUID valide : " + platformFeesWalletId);
+      if (strict) {
+        throw new IllegalStateException("FATAL — INTERNAL_SERVICE_KEY trop courte (< 32 caractères) en " + env + ".");
+      }
+      log.warn("INTERNAL_SERVICE_KEY courte (< 32) en {} — acceptable en dev uniquement.", env);
     }
     if (checkpointCron == null || checkpointCron.isBlank()) {
       throw new IllegalStateException("FATAL — goursi.ledger.checkpoint-cron manquant.");
@@ -59,8 +57,16 @@ public class StartupConfigValidator implements ApplicationRunner {
     log.info("Configuration ledger validée (env={})", env);
   }
 
+  private static String env() {
+    String env = System.getenv("APP_ENV");
+    if (env == null || env.isBlank()) {
+      env = System.getenv("NODE_ENV");
+    }
+    return env == null || env.isBlank() ? "development" : env;
+  }
+
   private boolean isPlaceholder(String value) {
-    String lower = value.toLowerCase();
+    String lower = value.toLowerCase(Locale.ROOT);
     for (String placeholder : PLACEHOLDERS) {
       if (lower.contains(placeholder)) {
         return true;
