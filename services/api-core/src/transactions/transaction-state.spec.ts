@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { ConflictException } from '@nestjs/common';
 import { assertTransition, TransactionStatus } from './transaction-state';
 
 describe('transaction-state (machine à états)', () => {
@@ -18,13 +18,13 @@ describe('transaction-state (machine à états)', () => {
   });
 
   it('refuse les transitions invalides (409)', () => {
-    expect(() => assertTransition(TransactionStatus.FAILED, TransactionStatus.SUCCESS)).toThrow(BadRequestException);
-    expect(() => assertTransition(TransactionStatus.CANCELLED, TransactionStatus.PROCESSING)).toThrow(BadRequestException);
-    expect(() => assertTransition(TransactionStatus.REVERSED, TransactionStatus.SUCCESS)).toThrow(BadRequestException);
-    expect(() => assertTransition(TransactionStatus.PENDING, TransactionStatus.SUCCESS)).toThrow(BadRequestException);
+    expect(() => assertTransition(TransactionStatus.FAILED, TransactionStatus.SUCCESS)).toThrow(ConflictException);
+    expect(() => assertTransition(TransactionStatus.CANCELLED, TransactionStatus.PROCESSING)).toThrow(ConflictException);
+    expect(() => assertTransition(TransactionStatus.REVERSED, TransactionStatus.SUCCESS)).toThrow(ConflictException);
+    expect(() => assertTransition(TransactionStatus.PENDING, TransactionStatus.SUCCESS)).toThrow(ConflictException);
   });
 
   it('refuse PENDING → REVERSED (reversal seulement depuis SUCCESS)', () => {
-    expect(() => assertTransition(TransactionStatus.PENDING, TransactionStatus.REVERSED)).toThrow(BadRequestException);
+    expect(() => assertTransition(TransactionStatus.PENDING, TransactionStatus.REVERSED)).toThrow(ConflictException);
   });
 });
