@@ -193,3 +193,22 @@ test('dashboard JWT : liste + stats', async () => {
   assert.equal(stats.status, 200);
   assert.ok(stats.body.totals.count >= 4);
 });
+
+test('checkout : le JS inline de la page est syntaxiquement valide (garde-fou #39)', async () => {
+  const created = await api('/api/v1/payments', { method: 'POST', auth: skTest, body: { amount_minor: 100, currency: 'XOF' } });
+  const ck = created.body.payment.checkout_url.split('/checkout/')[1];
+  const page = await fetch(`${base}/checkout/${ck}`);
+  const html = await page.text();
+
+  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+  assert.ok(scripts.length >= 1, 'la page contient un script inline');
+  for (const src of scripts) {
+    // new Function lève une SyntaxError si le script est invalide — aucun handler ne doit mourir.
+    assert.doesNotThrow(() => new Function(src), 'le script inline doit être parsable sans erreur de syntaxe');
+  }
+
+  // Le script doit contenir les handlers critiques (méthodes, phone, PIN, poll).
+  assert.match(scripts[0], /btn-pay/);
+  assert.match(scripts[0], /btn-confirm/);
+  assert.match(scripts[0], /function poll/);
+});
