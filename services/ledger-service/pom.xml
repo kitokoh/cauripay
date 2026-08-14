@@ -175,6 +175,20 @@
         </execution>
       </executions>
     </plugin>
+    <!-- Flyway : migrations exécutables via make migrate-java / CI (mvn flyway:migrate) -->
+    <plugin>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-maven-plugin</artifactId>
+      <version>9.22.3</version>
+      <configuration>
+        <url>${env.LEDGER_DATABASE_URL}</url>
+        <user>${env.LEDGER_DATABASE_USER}</user>
+        <password>${env.LEDGER_DATABASE_PASSWORD}</password>
+        <schemas>
+          <schema>ledger</schema>
+        </schemas>
+      </configuration>
+    </plugin>
   </plugins>
   </build>
 
