@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "commonjs", "moduleResolution": "node", "target": "ES2022",
+    "outDir": "dist", "baseUrl": "./",
+    "emitDecoratorMetadata": true, "experimentalDecorators": true, "esModuleInterop": true,
+    "paths": { "@goursi/shared-types": ["../../packages/shared-types/src"] }
+  },
+  "include": ["src/**/*.ts"]
+}
