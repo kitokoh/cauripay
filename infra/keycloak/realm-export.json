@@ -1,0 +1,75 @@
+{
+  "realm": "goursi",
+  "enabled": true,
+  "displayName": "GOURSI",
+  "displayNameHtml": "<div class=\"kc-logo-text\"><span>GOURSI</span></div>",
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": false,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 1800,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "failureFactor": 3,
+  "roles": {
+    "realm": [
+      { "name": "CUSTOMER", "description": "Client wallet" },
+      { "name": "MERCHANT", "description": "Marchand" },
+      { "name": "AGENT", "description": "Agent cash-in/cash-out" },
+      { "name": "DISTRIBUTOR", "description": "Distributeur" },
+      { "name": "SUPER_ADMIN", "description": "Administrateur plateforme" },
+      { "name": "COMPLIANCE_OFFICER", "description": "Officier conformité (KYC/AML)" },
+      { "name": "SUPPORT_L1", "description": "Support niveau 1" },
+      { "name": "SUPPORT_L2", "description": "Support niveau 2 (reversements)" },
+      { "name": "FINANCE_MANAGER", "description": "Direction financière" },
+      { "name": "OPS_AGENT_MANAGER", "description": "Gestion des agents (ops)" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "api-core",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "redirectUris": [],
+      "webOrigins": []
+    },
+    {
+      "clientId": "web-admin",
+      "name": "Back-office GOURSI",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://localhost:3001/*", "https://admin.goursi.local/*"],
+      "webOrigins": ["http://localhost:3001"],
+      "attributes": { "post.logout.redirect.uris": "http://localhost:3001/*" }
+    },
+    {
+      "clientId": "web-business",
+      "name": "Portail entreprises GOURSI",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://localhost:3002/*", "https://business.goursi.local/*"],
+      "webOrigins": ["http://localhost:3002"],
+      "attributes": { "post.logout.redirect.uris": "http://localhost:3002/*" }
+    }
+  ],
+  "attributes": {
+    "frontendUrl": "http://localhost:8080",
+    "orgEnabled": "false"
+  }
+}

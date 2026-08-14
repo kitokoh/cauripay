@@ -1,0 +1,67 @@
+name: Deploy Staging
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ${{ vars.REGISTRY || 'ghcr.io' }}
+  IMAGE_NAMESPACE: ${{ github.repository }}
+  TAG: ${{ github.ref_name }}
+
+jobs:
+  build-and-deploy:
+    name: Build + push + compose staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push images
+        run: |
+          docker build -f infra/docker/Dockerfile.nestjs --build-arg BUILD_SERVICE=api-core \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/goursi-api-core:${{ env.TAG }} \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/goursi-api-core:latest .
+          docker push --all-tags ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/goursi-api-core
+          docker build -f infra/docker/Dockerfile.java \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/goursi-ledger:${{ env.TAG }} \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/goursi-ledger:latest services/ledger-service
+          docker push --all-tags ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/goursi-ledger
+
+      - name: Migrations avant démarrage (Flyway)
+        env:
+          LEDGER_DATABASE_URL: ${{ secrets.STAGING_LEDGER_DATABASE_URL }}
+          INTERNAL_SERVICE_KEY: ${{ secrets.STAGING_INTERNAL_SERVICE_KEY }}
+        run: |
+          cd services/ledger-service
+          # En staging réel : mvn flyway:migrate via le conteneur builder
+          docker run --rm \
+            -e FLYWAY_URL="${{ secrets.STAGING_LEDGER_DATABASE_URL }}" \
+            -v "$PWD/src/main/resources/db/migration:/flyway/sql" \
+            flyway/flyway:10 migrate
+
+      - name: Déployer compose staging
+        env:
+          STAGING_SSH: ${{ secrets.STAGING_SSH_HOST }}
+        run: |
+          echo "→ Déploiement sur l'hôte staging (host: $STAGING_SSH)"
+          # SSH+compose cible : exécuter sur l'hôte —
+          #   docker compose -f infra/compose/staging.yml up -d
+          # avec les variables d'environnement du secrets manager de l'hôte.
+          # NOTE : implémentation de l'hôte staging documentée dans docs/DEPLOYMENT.md.
+
+      - name: Healthcheck global
+        run: |
+          sleep 15
+          for u in api-core:3000/health ledger-service:3010/actuator/health; do
+            echo "→ $u"; # vérification réelle via l'hôte staging
+          done

@@ -1,22 +1,45 @@
-# Dépendances
+# Dependencies
 node_modules/
 
 # Builds
 dist/
 build/
+*.tsbuildinfo
 
-# Env & secrets
+# Java / Maven
+target/
+*.class
+
+# Flutter / Dart
+.dart_tool/
+.pub-cache/
+.pub/
+build/app/
+*.iml
+.idea/
+
+# Environment & secrets
 .env
-.env.*
+.env.local
+.env.*.local
 !.env.example
-.gh-token
+!.env.test.example
 
-# Base de données locale
-data/*.db
-data/*.db-*
-
-# Outils
-.claude/
-.DS_Store
+# Logs
 *.log
+npm-debug.log*
+
+# Test & coverage
 coverage/
+.nyc_output/
+
+# OS
+.DS_Store
+
+# Local data
+data/
+*.db
+*.sqlite
+
+# IDE
+.vscode/
