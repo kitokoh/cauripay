@@ -6,8 +6,13 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
+    name: Tests & builds
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,9 +21,45 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Build serveur
+      - name: Build serveur (tsc)
         run: npm -w server run build
-      - name: Tests E2E
+      - name: Tests E2E (node:test)
         run: npm test
-      - name: Build dashboard
+      - name: Build dashboard (tsc + vite)
         run: npm -w dashboard run build
+
+  quality:
+    name: Quality (typecheck noEmit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: tsc server
+        run: npx -w server tsc -p tsconfig.json --noEmit
+      - name: tsc dashboard
+        run: npx -w dashboard tsc -p tsconfig.json --noEmit
+
+  security:
+    name: Sécurité (secrets + dépendances)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan secrets (gitleaks)
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.18.4/gitleaks_8.18.4_linux_x64.tar.gz | tar -xz gitleaks
+          ./gitleaks detect --source . --no-banner --redact
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Audit dépendances (npm audit)
+        run: npm audit --audit-level=high
+      - name: Vérification secrets d'environnement
+        run: |
+          if git ls-files | grep -q '^\.env$'; then echo "::error::.env commité !"; exit 1; fi
