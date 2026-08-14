@@ -42,5 +42,6 @@ data/
 *.sqlite
 
 # IDE
+.claude/
 .vscode/
 zap-report*
