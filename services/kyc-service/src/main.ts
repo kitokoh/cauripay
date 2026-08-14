@@ -19,7 +19,7 @@ async function bootstrap(): Promise<void> {
     .build();
   SwaggerModule.setup('api/v1/docs', app, SwaggerModule.createDocument(app, swagger));
 
-  const port = Number(process.env.KYC_SERVICE_PORT ?? 3030);
+  const port = Number(process.env.KYC_PORT ?? process.env.KYC_SERVICE_PORT ?? 3030);
   await app.listen(port);
   // eslint-disable-next-line no-console
   console.log(`kyc-service prêt sur :${port} — docs /api/v1/docs`);

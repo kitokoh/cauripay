@@ -27,7 +27,7 @@ Erreurs : `404 KYC_NOT_FOUND` · `409 KYC_ALREADY_PROCESSED` (double traitement)
 createdb kyc   # Postgres
 cd services/kyc-service
 npx prisma migrate dev --name init   # schéma
-KYC_SERVICE_PORT=3030 DATABASE_URL=postgresql://goursi:goursi@localhost:5432/kyc \
+KYC_PORT=3030 KYC_DATABASE_URL=postgresql://goursi:goursi@localhost:5432/kyc \
 RABBITMQ_URL=amqp://guest:guest@localhost:5672 INTERNAL_SERVICE_KEY=dev-internal-key-0123456789 \
 KYC_ENCRYPTION_KEY=$(openssl rand -hex 32) JWT_SECRET=dev-jwt-secret-0123456789 \
 npm run start:dev
