@@ -1,0 +1,110 @@
+// Prisma schema — api-core.
+// Modèles User/Wallet/KycRecord (GOURSI-021a). La migration SQL + le flux d'auth
+// arrivent avec GOURSI-021 (register/login/OTP/MPIN).
+//
+// RÈGLE (ADR-004) : le schéma `ledger` n'appartient QU'À Flyway (ledger-service).
+// Prisma ne touche JAMAIS aux tables ledger — les soldes se lisent via le ledger.
+// Les enums ci-dessous sont le miroir de @goursi/shared-types (spec §4.4).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  MERCHANT
+  AGENT
+  DISTRIBUTOR
+  SUPER_ADMIN
+  COMPLIANCE_OFFICER
+  SUPPORT_L1
+  SUPPORT_L2
+  FINANCE_MANAGER
+  OPS_AGENT_MANAGER
+}
+
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+  CLOSED
+}
+
+enum KycLevel {
+  BASIC
+  VERIFIED
+  PREMIUM
+}
+
+enum KycStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum WalletType {
+  CUSTOMER
+  AGENT
+  AGENT_FLOAT
+  MERCHANT
+  PLATFORM_FEES
+  PLATFORM_REVENUE
+}
+
+enum WalletStatus {
+  ACTIVE
+  FROZEN
+  CLOSED
+}
+
+/// Utilisateur de la plateforme (client, agent, marchand…). Le MPIN est haché (bcrypt).
+model User {
+  id         String     @id @default(uuid())
+  phone      String     @unique
+  email      String?    @unique
+  fullName   String
+  mpinHash   String
+  role       UserRole   @default(CUSTOMER)
+  kycLevel   KycLevel   @default(BASIC)
+  status     UserStatus @default(ACTIVE)
+  wallet     Wallet?
+  kycRecord  KycRecord?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@index([role])
+}
+
+/// Wallet de l'utilisateur — identité côté api-core ; les SOLDES vivent dans le ledger
+/// (ADR-004 : api-core crée le wallet à solde 0 via ledger-service, puis ne fait que LIRE).
+model Wallet {
+  id        String       @id @default(uuid())
+  ownerId   String       @unique
+  owner     User         @relation(fields: [ownerId], references: [id])
+  type      WalletType   @default(CUSTOMER)
+  status    WalletStatus @default(ACTIVE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([type])
+  @@index([status])
+}
+
+/// Dossier KYC de l'utilisateur (documents chiffrés AES-256 côté kyc-service).
+model KycRecord {
+  id          String    @id @default(uuid())
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id])
+  level       KycLevel  @default(BASIC)
+  status      KycStatus @default(PENDING)
+  country     String?
+  submittedAt DateTime  @default(now())
+  reviewedAt  DateTime?
+  reviewedBy  String?
+
+  @@index([status])
+}

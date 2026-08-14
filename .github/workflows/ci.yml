@@ -22,6 +22,11 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci --no-audit --no-fund
+      - name: Générer les clients Prisma (services NestJS)
+        run: |
+          for d in services/*/; do
+            if [ -f "$d/prisma/schema.prisma" ]; then (cd "$d" && npx prisma generate); fi
+          done
       - name: ESLint
         run: npm run lint
       - name: Typecheck (tsc --noEmit strict)
@@ -43,6 +48,11 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci --no-audit --no-fund
+      - name: Générer les clients Prisma (services NestJS)
+        run: |
+          for d in services/*/; do
+            if [ -f "$d/prisma/schema.prisma" ]; then (cd "$d" && npx prisma generate); fi
+          done
       - name: Tests Jest (tous les workspaces TS)
         run: npm run test
 
