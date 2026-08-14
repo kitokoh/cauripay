@@ -6,6 +6,8 @@ import {
   MemoryHealthIndicator,
   PrismaHealthIndicator,
 } from '@nestjs/terminus';
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Public } from '../common/decorators/public.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
@@ -13,6 +15,7 @@ import { PrismaService } from '../prisma/prisma.service';
  * - liveness : le process répond (200) ;
  * - readiness : Prisma (base) joignable + mémoire sous seuil.
  */
+@ApiTags('health')
 @Controller('health')
 export class HealthController {
   constructor(
@@ -23,6 +26,9 @@ export class HealthController {
   ) {}
 
   @Get()
+  @Public()
+  @ApiOperation({ summary: 'Liveness + readiness (DB, mémoire)' })
+  @ApiOkResponse({ description: 'Service sain' })
   @HealthCheck()
   check(): Promise<HealthCheckResult> {
     return this.health.check([

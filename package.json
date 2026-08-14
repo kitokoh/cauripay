@@ -12,7 +12,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm run build -w @goursi/shared-types && npm run build --workspaces --if-present",
     "dev": "npm run start:dev --workspaces --if-present",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

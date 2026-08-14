@@ -3,7 +3,21 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src",
-    "composite": true
+    "paths": {
+      "@goursi/shared-types": [
+        "../shared-types/dist/index.d.ts"
+      ],
+      "@goursi/shared-types/*": [
+        "../shared-types/dist/*"
+      ]
+    },
+    "declaration": true
   },
-  "include": ["src/**/*"]
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "src/**/__tests__",
+    "src/**/*.spec.ts"
+  ]
 }

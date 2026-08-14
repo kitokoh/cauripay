@@ -3,9 +3,11 @@
   "version": "0.2.0",
   "description": "Types partagés GOURSI : enveloppes API, enums métier, contrats HTTP inter-services.",
   "license": "MIT",
-  "main": "src/index.ts",
-  "types": "src/index.ts",
-  "files": ["src"],
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "src"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
