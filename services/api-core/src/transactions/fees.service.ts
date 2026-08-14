@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { calculateFee, checkKycLimit, Decimal, KycLevel } from '@cauripay/validation-rules';
+import { calculateFee, checkKycLimit } from '@cauripay/validation-rules';
+import type { KycLevel } from '@cauripay/validation-rules';
 import { TransactionType } from '@prisma/client';
 
 /**
@@ -15,12 +16,20 @@ export class FeesService {
   }
 
   /** Limites KYC : montant + totaux journaliers/mensuels + solde. */
-  checkKyc(kycLevel: string, amountMinor: number, dailyTotal: number, monthlyTotal: number, balance: number) {
+  checkKyc(
+    kycLevel: string,
+    amountMinor: number,
+    dailyTotal: number,
+    monthlyTotal: number,
+    balance: number,
+  ) {
     const level = kycLevel as KycLevel;
     return checkKycLimit(level, amountMinor, dailyTotal, monthlyTotal, balance);
   }
 
-  private toFeeType(type: TransactionType): 'P2P' | 'CASH_IN' | 'CASH_OUT' | 'BILL_PAYMENT' | 'MERCHANT_PAYMENT' {
+  private toFeeType(
+    type: TransactionType,
+  ): 'P2P' | 'CASH_IN' | 'CASH_OUT' | 'BILL_PAYMENT' | 'MERCHANT_PAYMENT' {
     return type as unknown as 'P2P' | 'CASH_IN' | 'CASH_OUT' | 'BILL_PAYMENT' | 'MERCHANT_PAYMENT';
   }
 }

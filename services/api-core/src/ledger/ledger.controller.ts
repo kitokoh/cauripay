@@ -16,7 +16,11 @@ export class LedgerController {
 
   @Get('wallets/me/history')
   @ApiOperation({ summary: 'Historique paginé (via ledger-service)' })
-  history(@Query('walletId') walletId: string, @Query('cursor') cursor?: string, @Query('limit') limit?: string) {
+  history(
+    @Query('walletId') walletId: string,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
+  ) {
     return this.ledger.history(walletId, cursor, limit ? Number(limit) : 50);
   }
 

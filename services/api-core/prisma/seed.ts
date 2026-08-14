@@ -26,8 +26,10 @@ async function main() {
         },
       });
     });
+    // eslint-disable-next-line no-console
     console.log('✓ Seed : utilisateur de démo créé (+23566000001 / password123)');
   } else {
+    // eslint-disable-next-line no-console
     console.log('✓ Seed : utilisateur de démo déjà présent');
   }
 }

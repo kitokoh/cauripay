@@ -25,19 +25,16 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const requestId = randomUUID();
 
     const status =
-      exception instanceof HttpException
-        ? exception.getStatus()
-        : HttpStatus.INTERNAL_SERVER_ERROR;
+      exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
 
     const code =
       exception instanceof HttpException
-        ? (exception.getResponse() as { code?: string }).code ?? exception.name
+        ? ((exception.getResponse() as { code?: string }).code ?? exception.name)
         : 'INTERNAL_ERROR';
 
     const message =
       exception instanceof HttpException
-        ? (exception.getResponse() as { message?: string }).message ??
-          exception.message
+        ? ((exception.getResponse() as { message?: string }).message ?? exception.message)
         : exception instanceof Error
           ? exception.message
           : 'Erreur interne';

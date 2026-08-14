@@ -24,7 +24,8 @@ export class LedgerClientService {
     config: ConfigService,
   ) {
     this.baseUrl = config.get<string>('LEDGER_URL') ?? 'http://localhost:3010';
-    this.serviceKey = config.get<string>('INTERNAL_SERVICE_KEY') ?? 'dev-internal-service-key-change-me';
+    this.serviceKey =
+      config.get<string>('INTERNAL_SERVICE_KEY') ?? 'dev-internal-service-key-change-me';
   }
 
   private headers() {
@@ -49,10 +50,12 @@ export class LedgerClientService {
   private async get<T>(path: string): Promise<T> {
     try {
       const res = await firstValueFrom(
-        this.http.get<{ data: T }>(`${this.baseUrl}${path}`, { headers: this.headers() }).pipe(timeout(10_000)),
+        this.http
+          .get<{ data: T }>(`${this.baseUrl}${path}`, { headers: this.headers() })
+          .pipe(timeout(10_000)),
       );
       return res.data.data ?? (res.data as unknown as T);
-    } catch (e) {
+    } catch {
       throw new ServiceUnavailableException({
         code: 'LEDGER_UNAVAILABLE',
         message: 'ledger-service injoignable',
@@ -64,10 +67,12 @@ export class LedgerClientService {
   private async post<T>(path: string, body: unknown): Promise<T> {
     try {
       const res = await firstValueFrom(
-        this.http.post<{ data: T }>(`${this.baseUrl}${path}`, body, { headers: this.headers() }).pipe(timeout(10_000)),
+        this.http
+          .post<{ data: T }>(`${this.baseUrl}${path}`, body, { headers: this.headers() })
+          .pipe(timeout(10_000)),
       );
       return res.data.data ?? (res.data as unknown as T);
-    } catch (e) {
+    } catch {
       throw new ServiceUnavailableException({
         code: 'LEDGER_UNAVAILABLE',
         message: 'ledger-service injoignable',

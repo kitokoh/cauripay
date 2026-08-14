@@ -11,8 +11,9 @@ export class JwtKeycloakGuard implements CanActivate {
   private readonly jwks: ReturnType<typeof createRemoteJWKSet>;
 
   constructor(config: ConfigService) {
-    const jwksUrl = config.get<string>('KEYCLOAK_JWKS_URL')
-      ?? 'http://localhost:8080/realms/goursi/protocol/openid-connect/certs';
+    const jwksUrl =
+      config.get<string>('KEYCLOAK_JWKS_URL') ??
+      'http://localhost:8080/realms/goursi/protocol/openid-connect/certs';
     this.jwks = createRemoteJWKSet(new URL(jwksUrl));
   }
 

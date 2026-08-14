@@ -44,9 +44,9 @@ describe('AuthService', () => {
 
   describe('register', () => {
     it('rejette un numéro invalide', async () => {
-      await expect(
-        service.register({ phone: '123', password: 'secret' }),
-      ).rejects.toThrow(ConflictException);
+      await expect(service.register({ phone: '123', password: 'secret' })).rejects.toThrow(
+        ConflictException,
+      );
     });
 
     it('crée User + Wallet + KycRecord en une $transaction', async () => {
@@ -64,9 +64,9 @@ describe('AuthService', () => {
   describe('login', () => {
     it('verrouille après 3 essais', async () => {
       redisMock.get.mockResolvedValue('3');
-      await expect(
-        service.login({ phone: '+23566000001', password: 'x' }),
-      ).rejects.toThrow(UnauthorizedException);
+      await expect(service.login({ phone: '+23566000001', password: 'x' })).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('incrémente le compteur sur identifiants invalides', async () => {
@@ -74,9 +74,9 @@ describe('AuthService', () => {
       redisMock.incr.mockResolvedValue(1);
       redisMock.expire.mockResolvedValue(1);
       prismaMock.user.findUnique.mockResolvedValue(null);
-      await expect(
-        service.login({ phone: '+23566000001', password: 'x' }),
-      ).rejects.toThrow(UnauthorizedException);
+      await expect(service.login({ phone: '+23566000001', password: 'x' })).rejects.toThrow(
+        UnauthorizedException,
+      );
       expect(redisMock.incr).toHaveBeenCalledWith('lock:+23566000001');
     });
 

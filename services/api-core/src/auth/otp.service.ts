@@ -5,11 +5,13 @@ import { Injectable } from '@nestjs/common';
 export class OtpService {
   private readonly ttlSeconds = 300;
 
-  constructor(private readonly redis: {
-    get(key: string): Promise<string | null>;
-    set(key: string, value: string, ttlSeconds: number): Promise<'OK'>;
-    del(key: string): Promise<number>;
-  }) {}
+  constructor(
+    private readonly redis: {
+      get(key: string): Promise<string | null>;
+      set(key: string, value: string, ttlSeconds: number): Promise<'OK'>;
+      del(key: string): Promise<number>;
+    },
+  ) {}
 
   generate(phone: string): Promise<string> {
     const code = String(Math.floor(100000 + Math.random() * 900000)); // 6 chiffres

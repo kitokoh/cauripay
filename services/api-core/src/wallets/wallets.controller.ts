@@ -16,7 +16,11 @@ export class WalletsController {
 
   @Get('history')
   @ApiOperation({ summary: 'Historique paginé (ledger)' })
-  history(@Query('walletId') walletId: string, @Query('cursor') cursor?: string, @Query('limit') limit?: string) {
+  history(
+    @Query('walletId') walletId: string,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
+  ) {
     return this.ledger.history(walletId, cursor, limit ? Number(limit) : 50);
   }
 }

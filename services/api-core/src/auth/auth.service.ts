@@ -1,8 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisProvider, REDIS } from '../common/redis.module';
@@ -31,7 +27,10 @@ export class AuthService {
     }
     const existing = await this.prisma.user.findUnique({ where: { phone: dto.phone } });
     if (existing) {
-      throw new ConflictException({ code: 'PHONE_ALREADY_REGISTERED', message: 'Numéro déjà enregistré' });
+      throw new ConflictException({
+        code: 'PHONE_ALREADY_REGISTERED',
+        message: 'Numéro déjà enregistré',
+      });
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
@@ -63,14 +62,20 @@ export class AuthService {
     const lockKey = `lock:${dto.phone}`;
     const attempts = Number((await this.redis.get(lockKey)) ?? '0');
     if (attempts >= LOGIN_MAX_ATTEMPTS) {
-      throw new UnauthorizedException({ code: 'ACCOUNT_LOCKED', message: 'Compte verrouillé 30 min' });
+      throw new UnauthorizedException({
+        code: 'ACCOUNT_LOCKED',
+        message: 'Compte verrouillé 30 min',
+      });
     }
 
     const user = await this.prisma.user.findUnique({ where: { phone: dto.phone } });
     if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) {
       const next = await this.redis.incr(lockKey);
       if (next === 1) await this.redis.expire(lockKey, LOGIN_LOCK_MINUTES * 60);
-      throw new UnauthorizedException({ code: 'INVALID_CREDENTIALS', message: 'Identifiants invalides' });
+      throw new UnauthorizedException({
+        code: 'INVALID_CREDENTIALS',
+        message: 'Identifiants invalides',
+      });
     }
 
     await this.redis.del(lockKey);
@@ -85,7 +90,8 @@ export class AuthService {
     }
     await this.redis.del(`otp:${dto.phone}`);
     const user = await this.prisma.user.findUnique({ where: { phone: dto.phone } });
-    if (!user) throw new UnauthorizedException({ code: 'USER_NOT_FOUND', message: 'Utilisateur inconnu' });
+    if (!user)
+      throw new UnauthorizedException({ code: 'USER_NOT_FOUND', message: 'Utilisateur inconnu' });
     return { verified: true };
   }
 
@@ -97,7 +103,10 @@ export class AuthService {
       if (!user) throw new UnauthorizedException();
       return this.issueTokens(user.id, user.phone, user.kycLevel);
     } catch {
-      throw new UnauthorizedException({ code: 'INVALID_REFRESH', message: 'Refresh token invalide' });
+      throw new UnauthorizedException({
+        code: 'INVALID_REFRESH',
+        message: 'Refresh token invalide',
+      });
     }
   }
 
