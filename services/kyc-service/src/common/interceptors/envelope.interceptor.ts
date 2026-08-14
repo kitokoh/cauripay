@@ -14,7 +14,7 @@ import { Request } from 'express';
  */
 @Injectable()
 export class EnvelopeInterceptor implements NestInterceptor {
-  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const req: Request = context.switchToHttp().getRequest();
     const requestId = (req.headers['x-request-id'] as string) ?? randomUUID();
     req.res?.setHeader('X-Request-Id', requestId);

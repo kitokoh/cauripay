@@ -14,13 +14,13 @@ import { Request } from 'express';
  */
 @Injectable()
 export class EnvelopeInterceptor implements NestInterceptor {
-  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const req: Request = context.switchToHttp().getRequest();
     const requestId = (req.headers['x-request-id'] as string) ?? randomUUID();
     req.res?.setHeader('X-Request-Id', requestId);
     const timestamp = new Date().toISOString();
     return next.handle().pipe(
-      map((data) => ({ success: true, data, timestamp, requestId })),
+      map((data: unknown) => ({ success: true, data, timestamp, requestId })),
     );
   }
 }
