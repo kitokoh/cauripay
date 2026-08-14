@@ -1,0 +1,28 @@
+---
+name: Feature / Tâche
+title: 'GOURSI-XXX · '
+about: Nouvelle fonctionnalité ou tâche technique (format du backlog)
+labels: feature
+---
+
+## Contexte
+
+<!-- Pourquoi ? Référence spec (REVUE-CONSTITUTION.md §X) -->
+
+## À faire
+
+- [ ] ...
+
+## Critères d'acceptation
+
+- [ ] ...
+
+## Fichiers concernés
+
+`...`
+
+## Règles à respecter
+
+<!-- Liste rouge, secrets, montants… -->
+
+**Bloqué par** : <!-- #XXX -->

@@ -1,0 +1,26 @@
+---
+name: Bug report
+title: 'BUG: '
+about: Signaler un comportement incorrect
+labels: bug
+---
+
+## Description
+
+## Reproduction
+
+1.
+2.
+3.
+
+## Comportement attendu
+
+## Comportement constaté
+
+## Environnement
+
+- Service / app :
+- Version / branche :
+- OS / navigateur :
+
+## Logs ou captures
