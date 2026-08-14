@@ -1,0 +1,24 @@
+name: 🗂 Épic (bloc)
+description: Issue de pilotage d'un bloc de travail (G0→G6), référence ses issues enfants et sa DoD
+title: "[ÉPIC] "
+labels: [epic]
+body:
+  - type: textarea
+    id: contexte
+    attributes:
+      label: Contexte
+      description: Objectif du bloc, pourquoi il existe
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Définition de done du bloc
+      description: Critères vérifiables (voir docs/DoD.md)
+    validations:
+      required: true
+  - type: textarea
+    id: enfants
+    attributes:
+      label: Issues enfants
+      description: Références des issues du bloc (une par ligne)

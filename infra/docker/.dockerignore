@@ -1,0 +1,8 @@
+node_modules
+.git
+**/target
+**/dist
+**/coverage
+*.log
+.env
+.env.*

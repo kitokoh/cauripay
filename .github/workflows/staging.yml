@@ -1,0 +1,71 @@
+name: Staging
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "services/**"
+      - "infra/**"
+      - "compose*.yml"
+      - "Dockerfile*"
+      - ".github/workflows/staging.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: staging
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Build des images + validation du compose + déploiement staging (GOURSI-005c)
+  # Le déploiement réel exige les secrets STAGING_HOST / STAGING_SSH_KEY.
+  # Sans secrets, le job valide le compose et s'arrête (log d'info).
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Build & deploy staging
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Validation compose
+        run: |
+          docker compose --env-file .env.example -f compose.staging.yml config --quiet && \
+          echo "✓ compose.staging.yml valide"
+
+      - name: Build images (services présents)
+        run: bash scripts/build-images.sh
+
+      - name: Déploiement staging (SSH)
+        if: ${{ secrets.STAGING_HOST != '' }}
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          source: "compose.staging.yml,.env.staging,scripts/deploy-staging.sh"
+          target: "~/cauripay"
+
+      - name: Migrations + up (SSH)
+        if: ${{ secrets.STAGING_HOST != '' }}
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            cd ~/cauripay && bash scripts/deploy-staging.sh
+
+      - name: Info (pas de secrets staging configurés)
+        if: ${{ secrets.STAGING_HOST == '' }}
+        run: echo "ℹ️ Secrets STAGING_* absents — déploiement réel désactivé. Ajoutez-les pour activer."

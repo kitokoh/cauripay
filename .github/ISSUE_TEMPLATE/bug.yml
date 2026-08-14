@@ -1,0 +1,37 @@
+name: 🐛 Bug
+description: Signaler un bug (comportement incorrect, régression, crash)
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: textarea
+    id: contexte
+    attributes:
+      label: Contexte
+      description: Que s'est-il passé ? Qu'attendiez-vous ?
+    validations:
+      required: true
+  - type: input
+    id: service
+    attributes:
+      label: Service / zone concernée
+      description: Ex. services/ledger, services/api-core, apps/web-admin…
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Étapes de reproduction
+      placeholder: |
+        1. Lancer `make up`…
+        2. Appeler `POST /internal/ledger/transfer`…
+        3. …
+  - type: textarea
+    id: preuves
+    attributes:
+      label: Preuves
+      description: Logs, traces, captures, commande de test qui échoue
+  - type: dropdown
+    id: priorite
+    attributes:
+      label: Priorité
+      options: [P0 — critique (bloquant), P1 — haute, P2 — moyenne, P3 — basse]
+    validations:
+      required: true

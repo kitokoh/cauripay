@@ -1,0 +1,41 @@
+# =============================================================================
+# Dockerfile.nestjs — build multi-stage pour un service NestJS (GOURSI-002b)
+# Usage : docker build -f infra/docker/Dockerfile.nestjs \
+#         --build-arg SERVICE_DIR=services/api-core .
+# =============================================================================
+
+ARG NODE_VERSION=22-alpine
+
+# ---- Stage 1 : dépendances + build ---------------------------------------
+FROM node:${NODE_VERSION} AS build
+ARG SERVICE_DIR
+WORKDIR /repo
+
+# package.json racine + workspaces pour tirer parti du cache npm
+COPY package.json package-lock.json ./
+COPY packages/shared-types/package.json packages/shared-types/
+COPY packages/validation-rules/package.json packages/validation-rules/
+COPY ${SERVICE_DIR}/package.json ${SERVICE_DIR}/
+RUN npm ci --no-audit --no-fund || npm install --no-audit --no-fund
+
+# sources
+COPY tsconfig.base.json ./
+COPY packages/shared-types packages/shared-types
+COPY packages/validation-rules packages/validation-rules
+COPY ${SERVICE_DIR} ${SERVICE_DIR}
+
+RUN npm run build --workspace $(node -p "require('./${SERVICE_DIR}/package.json').name")
+
+# ---- Stage 2 : image d'exécution -----------------------------------------
+FROM node:${NODE_VERSION} AS runtime
+ARG SERVICE_DIR
+ENV NODE_ENV=production
+WORKDIR /app
+
+COPY --from=build /repo/${SERVICE_DIR}/dist ./dist
+COPY --from=build /repo/${SERVICE_DIR}/package.json ./package.json
+COPY --from=build /repo/node_modules ./node_modules
+
+USER node
+EXPOSE 8000
+CMD ["node", "dist/main.js"]

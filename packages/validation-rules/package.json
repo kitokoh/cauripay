@@ -1,0 +1,17 @@
+{
+  "name": "@cauripay/validation-rules",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Règles de validation partagées CauriPay : limites KYC, calcul de frais, numéros de téléphone.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@cauripay/shared-types": "*"
+  },
+  "license": "MIT"
+}

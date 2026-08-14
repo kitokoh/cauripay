@@ -1,0 +1,29 @@
+name: ✨ Feature
+description: Nouvelle fonctionnalité, endpoint, service ou package
+title: "[Feature] "
+labels: [feature]
+body:
+  - type: textarea
+    id: contexte
+    attributes:
+      label: Contexte & besoin
+      description: Pourquoi cette fonctionnalité ? Qui en bénéficie ?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptation
+    attributes:
+      label: Critères d'acceptation
+      description: Liste vérifiable de ce qui doit être vrai à la fin (tests, commandes)
+    validations:
+      required: true
+  - type: input
+    id: bloc
+    attributes:
+      label: Bloc / milestone cible
+      description: G0, G1, G2… ou un service précis
+  - type: textarea
+    id: fichiers
+    attributes:
+      label: Fichiers concernés
+      description: Chemins estimés (services/, packages/, docs/…)

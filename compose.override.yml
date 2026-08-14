@@ -1,0 +1,37 @@
+# =============================================================================
+# CauriPay — docker-compose.override (développement, GOURSI-002c)
+# Ajouté automatiquement par `docker compose up` en dev : volumes de données,
+# healthchecks renforcés, seed Keycloak au démarrage.
+# =============================================================================
+
+name: cauripay-dev
+
+services:
+  postgres:
+    volumes:
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+      - postgres_data:/var/lib/postgresql/data
+
+  keycloak:
+    # Import du realm GOURSI au premier démarrage (seed idempotent côté API aussi)
+    volumes:
+      - ./infra/keycloak/realm-goursi.json:/opt/keycloak/data/import/realm-goursi.json:ro
+    command:
+      - "start-dev"
+      - "--import-realm"
+
+  # --- Services applicatifs (activés au fil des blocs) -----------------------
+  # Modèle à suivre (hot-reload) :
+  # api-core:
+  #   build:
+  #     context: .
+  #     dockerfile: infra/docker/Dockerfile.nestjs
+  #     args: { SERVICE_DIR: services/api-core }
+  #   volumes:
+  #     - ./services/api-core/src:/app/src:ro
+  #   env_file: .env
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:

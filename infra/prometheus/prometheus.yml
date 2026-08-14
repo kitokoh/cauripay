@@ -1,0 +1,22 @@
+# CauriPay — Prometheus (GOURSI-OBS1)
+# Cibles : ledger-service (/metrics, Micrometer), api-core (/metrics), pushgateway le cas échéant.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: ledger-service
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["ledger:8100"]
+        labels: { service: ledger }
+
+  - job_name: api-core
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["api-core:8000"]
+        labels: { service: api-core }
