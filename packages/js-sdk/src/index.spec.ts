@@ -47,18 +47,18 @@ describe('GoursiClient', () => {
         json: () =>
           Promise.resolve({
             success: true,
-            data: { id: 'pay_1', status: 'pending', amountMinor: 2500, currency: 'XAF' },
+            data: { id: 'pay_1', status: 'PENDING', amount: '2500', currency: 'XAF' },
           }),
       }) as unknown as typeof fetch;
 
       const client = new GoursiClient({ apiKey: 'sk_test_123', sandbox: true });
       const result = await client.paymentsInitiate({
-        amountMinor: 2500,
+        amount: '2500',
         currency: 'XAF',
         to: '+23566000001',
       });
       expect(result.id).toBe('pay_1');
-      expect(result.status).toBe('pending');
+      expect(result.status).toBe('PENDING');
 
       const [url, options] = (globalThis.fetch as jest.Mock).mock.calls[0];
       expect(url).toBe('https://sandbox.api.goursi.dev/v1/payments');
@@ -78,14 +78,62 @@ describe('GoursiClient', () => {
 
       const client = new GoursiClient({ apiKey: 'sk_test_123', sandbox: true });
       await expect(
-        client.paymentsInitiate({ amountMinor: 1, currency: 'XAF', to: 'x' }),
+        client.paymentsInitiate({ amount: '1', currency: 'XAF', to: 'x' }),
       ).rejects.toMatchObject({
         status: 422,
         code: 'INSUFFICIENT_FUNDS',
       });
       await expect(
-        client.paymentsInitiate({ amountMinor: 1, currency: 'XAF', to: 'x' }),
+        client.paymentsInitiate({ amount: '1', currency: 'XAF', to: 'x' }),
       ).rejects.toBeInstanceOf(GoursiApiError);
     });
+  });
+});
+
+describe('paymentsGet / paymentsCancel', () => {
+  const originalFetch = globalThis.fetch;
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it('récupère un paiement', async () => {
+    globalThis.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          success: true,
+          data: { id: 'pay_1', status: 'SUCCESS', amount: '2500', currency: 'XAF' },
+        }),
+    }) as unknown as typeof fetch;
+
+    const client = new GoursiClient({ apiKey: 'sk_test_123' });
+    const result = await client.paymentsGet('pay_1');
+    expect(result.status).toBe('SUCCESS');
+    expect((fetch as jest.Mock).mock.calls[0][0]).toContain('/payments/pay_1');
+  });
+
+  it('annule un paiement', async () => {
+    globalThis.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          success: true,
+          data: { id: 'pay_1', status: 'CANCELLED', amount: '2500', currency: 'XAF' },
+        }),
+    }) as unknown as typeof fetch;
+
+    const client = new GoursiClient({ apiKey: 'sk_test_123' });
+    const result = await client.paymentsCancel('pay_1');
+    expect(result.status).toBe('CANCELLED');
+    expect((fetch as jest.Mock).mock.calls[0][0]).toContain('/payments/pay_1/cancel');
+  });
+
+  it('refuse un montant float (spec §8.2)', async () => {
+    const client = new GoursiClient({ apiKey: 'sk_test_123' });
+    await expect(
+      client.paymentsInitiate({ amount: 25.5 as unknown as string, currency: 'XAF', to: 'x' }),
+    ).rejects.toThrow('jamais de float');
   });
 });
