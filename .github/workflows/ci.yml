@@ -28,8 +28,8 @@ jobs:
       - name: Build dashboard (tsc + vite)
         run: npm -w dashboard run build
 
-  typecheck:
-    name: Typecheck (noEmit)
+  quality:
+    name: Quality (typecheck noEmit)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
