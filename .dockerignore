@@ -1,0 +1,28 @@
+# Dépendances
+node_modules
+**/node_modules
+
+# Builds
+**/dist
+**/target
+**/build
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+!.env.test.example
+*.pem
+*.key
+
+# Données locales
+data/
+
+# Rapports
+coverage
+*.log
+
+# Git
+.git
+.gitignore
+.github

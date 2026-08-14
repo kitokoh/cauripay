@@ -21,12 +21,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Build serveur (tsc)
-        run: npm -w server run build
+      - name: Build api-mvp (tsc)
+        run: npm -w @cauripay/api-mvp run build
       - name: Tests E2E (node:test)
         run: npm test
       - name: Build dashboard (tsc + vite)
-        run: npm -w dashboard run build
+        run: npm -w @cauripay/dashboard run build
 
   quality:
     name: Quality (typecheck noEmit)
@@ -38,10 +38,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: tsc server
-        run: npx -w server tsc -p tsconfig.json --noEmit
+      - name: tsc api-mvp
+        run: npx -w @cauripay/api-mvp tsc -p tsconfig.json --noEmit
       - name: tsc dashboard
-        run: npx -w dashboard tsc -p tsconfig.json --noEmit
+        run: npx -w @cauripay/dashboard tsc -p tsconfig.json --noEmit
 
   security:
     name: Sécurité (secrets + dépendances)

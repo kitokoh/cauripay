@@ -1,22 +1,36 @@
 # Dépendances
 node_modules/
 
-# Builds
+# Builds TS
 dist/
 build/
+
+# Builds Java / Maven
+target/
+*.jar
+*.war
 
 # Env & secrets
 .env
 .env.*
 !.env.example
+!.env.test.example
 .gh-token
+*.pem
+*.key
 
 # Base de données locale
-data/*.db
-data/*.db-*
+data/
+*.db
+*.db-*
 
 # Outils
 .claude/
 .DS_Store
 *.log
 coverage/
+.vscode/
+.idea/
+
+# Rapports de scan
+zap-report*
