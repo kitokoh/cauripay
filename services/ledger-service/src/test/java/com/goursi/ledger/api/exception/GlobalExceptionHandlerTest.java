@@ -49,28 +49,28 @@ class GlobalExceptionHandlerTest {
   void insufficientFundsMapsTo422() throws Exception {
     mockMvc.perform(post("/stub/insufficient"))
         .andExpect(status().isUnprocessableEntity())
-        .andExpect(jsonPath("$.code").value("INSUFFICIENT_FUNDS"))
-        .andExpect(jsonPath("$.message").value("Solde insuffisant"))
-        .andExpect(jsonPath("$.details.walletId").exists())
-        .andExpect(jsonPath("$.details.balance").value(100.00))
-        .andExpect(jsonPath("$.details.requested").value(500.00))
-        .andExpect(jsonPath("$.timestamp").exists())
-        .andExpect(jsonPath("$.requestId").exists());
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.error.code").value("INSUFFICIENT_FUNDS"))
+        .andExpect(jsonPath("$.error.message").value("Solde insuffisant"))
+        .andExpect(jsonPath("$.error.details.walletId").exists())
+        .andExpect(jsonPath("$.error.details.available").value("100.00"))
+        .andExpect(jsonPath("$.error.details.requested").value("500.00"))
+        .andExpect(jsonPath("$.timestamp").exists());
   }
 
   @Test
   void idempotencyConflictMapsTo409() throws Exception {
     mockMvc.perform(post("/stub/conflict"))
         .andExpect(status().isConflict())
-        .andExpect(jsonPath("$.code").value("IDEMPOTENCY_CONFLICT"));
+        .andExpect(jsonPath("$.error.code").value("IDEMPOTENCY_CONFLICT"));
   }
 
   @Test
   void genericErrorMapsTo500WithoutLeak() throws Exception {
     mockMvc.perform(post("/stub/boom"))
         .andExpect(status().isInternalServerError())
-        .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"))
-        .andExpect(jsonPath("$.message").value("Erreur interne du service"))
-        .andExpect(jsonPath("$.details").doesNotExist());
+        .andExpect(jsonPath("$.error.code").value("INTERNAL_ERROR"))
+        .andExpect(jsonPath("$.error.message").value("Erreur interne"))
+        .andExpect(jsonPath("$.error.details").doesNotExist());
   }
 }
