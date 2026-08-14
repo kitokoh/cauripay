@@ -61,3 +61,18 @@ jobs:
       - name: Maven test
         working-directory: services/ledger-service
         run: mvn -B -q test
+
+  legacy:
+    name: Tests legacy v0.1 (archivé)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install + tests legacy/server
+        working-directory: legacy/server
+        run: |
+          npm ci --no-audit --no-fund
+          npm test
