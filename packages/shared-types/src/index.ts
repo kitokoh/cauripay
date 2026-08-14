@@ -153,6 +153,7 @@ export interface BalanceResult {
   walletId: string;
   balance: string;
   frozenBalance: string;
+  availableBalance: string;
   version: number;
 }
 

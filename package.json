@@ -30,5 +30,11 @@
     "prettier": "^3.3.3",
     "typescript": "^5.5.4"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "allowScripts": {
+    "bcrypt@5.1.1": true,
+    "prisma@5.22.0": true,
+    "@prisma/client@5.22.0": true,
+    "@prisma/engines@5.22.0": true
+  }
 }
