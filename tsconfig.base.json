@@ -29,5 +29,5 @@
       "@goursi/payment-rail-contracts/*": ["packages/payment-rail-contracts/src/*"]
     }
   },
-  "exclude": ["node_modules", "dist", "legacy"]
+  "exclude": ["node_modules", "dist", "legacy", "apps"]
 }
