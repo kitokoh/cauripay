@@ -1,7 +1,6 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { LedgerClientService } from '../ledger-client/ledger-client.service';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotFoundException } from '@nestjs/common';
@@ -11,7 +10,6 @@ import { NotFoundException } from '@nestjs/common';
  */
 @ApiTags('wallets')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @Controller('wallets')
 export class WalletsController {
   constructor(

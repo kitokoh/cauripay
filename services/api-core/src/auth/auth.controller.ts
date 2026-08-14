@@ -1,8 +1,7 @@
-import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, HttpCode, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto, LoginDto, VerifyOtpDto, RefreshDto, ChangeMpinDto } from './dto/auth.dto';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('auth')
@@ -39,8 +38,7 @@ export class AuthController {
 
   @Post('change-mpin')
   @HttpCode(200)
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+    @ApiBearerAuth()
   @ApiOperation({ summary: 'Changement de MPIN (6 chiffres)' })
   changeMpin(@CurrentUser() user: { sub: string }, @Body() dto: ChangeMpinDto) {
     return this.auth.changeMpin(user.sub, dto);

@@ -1,4 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
+import { Public } from './common/decorators/public.decorator';
 import { ApiTags } from '@nestjs/swagger';
 import { PrismaService } from './prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
@@ -13,6 +14,7 @@ export class HealthController {
   ) {}
 
   @Get()
+  @Public()
   async health() {
     let db = 'up';
     try {
