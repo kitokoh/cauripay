@@ -1,0 +1,63 @@
+// GOURSI — schéma Prisma notification-service (spec GOURSI-026, issues #210-#213)
+// Persistance des notifications et configuration des canaux (SMS/Email/Push/WhatsApp).
+// Output dédié : le monorepo partage plusieurs schémas Prisma (api-core utilise le client
+// par défaut) — un output isolé évite d'écraser le client généré des autres services.
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../../node_modules/.prisma/notification-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum NotificationType {
+  TRANSACTION
+  AGENT_FLOAT_LOW
+  KYC
+  AML
+  SYSTEM
+}
+
+enum NotificationChannel {
+  SMS
+  EMAIL
+  PUSH
+  WHATSAPP
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model Notification {
+  id          String             @id @default(uuid())
+  userId      String
+  type        NotificationType
+  channel     NotificationChannel
+  title       String
+  body        String
+  data        Json?
+  status      NotificationStatus @default(PENDING)
+  attempts    Int                @default(0)
+  nextRetryAt DateTime?
+  deliveredAt DateTime?
+  lastError   String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([userId])
+  @@index([status, nextRetryAt])
+}
+
+model ChannelConfig {
+  id        String             @id @default(uuid())
+  channel   NotificationChannel @unique
+  enabled   Boolean            @default(true)
+  config    Json
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+}
