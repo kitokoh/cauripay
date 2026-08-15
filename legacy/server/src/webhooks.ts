@@ -43,7 +43,8 @@ export function merchantWebhookSecret(merchantId: string, mode: 'test' | 'live')
   return m?.s ?? '';
 }
 
-const BACKOFF_MS = [1000, 5000, 30000, 300000]; // 4 tentatives de repli
+export const BACKOFF_MS = [1000, 5000, 30000, 300000]; // 4 tentatives de repli
+const MAX_ATTEMPTS = BACKOFF_MS.length;
 
 /**
  * Dispatch un événement vers tous les webhooks actifs du marchand (mode + types).
@@ -106,7 +107,7 @@ async function deliverWithRetry(webhookId: string, attemptId: string, eventType:
     return;
   }
 
-  if (attempt >= BACKOFF_MS.length) {
+  if (attempt >= MAX_ATTEMPTS) {
     db.prepare(`UPDATE webhook_attempts SET status = 'failed', http_status = ?, attempts = ?, last_error = ? WHERE id = ?`)
       .run(httpStatus, attempt, error, attemptId);
     return;
@@ -138,6 +139,23 @@ export async function replayLastEvent(webhookId: string): Promise<string> {
 
   await deliverWithRetry(wh.id, attemptId, last.event_type, last.payload, signature, 1);
   return attemptId;
+}
+
+/** Rejeu des tentatives restantes après un redémarrage (issue #44). */
+export function resumePendingRetries(): number {
+  const pending = qall<AttemptRow>(
+    `SELECT * FROM webhook_attempts
+     WHERE status = 'failed' AND attempts < ? AND next_retry_at IS NOT NULL AND next_retry_at <= ?
+     ORDER BY created_at ASC`,
+    MAX_ATTEMPTS, toIso(),
+  );
+  for (const p of pending) {
+    const delay = Math.max(0, new Date(p.next_retry_at as string).getTime() - Date.now());
+    setTimeout(() => {
+      void deliverWithRetry(p.webhook_id, p.id, p.event_type, p.payload, p.signature, p.attempts + 1);
+    }, delay);
+  }
+  return pending.length;
 }
 
 /** Ping de test : webhook.test livré une fois. */

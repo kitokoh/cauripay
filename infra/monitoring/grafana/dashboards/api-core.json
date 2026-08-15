@@ -1,0 +1,34 @@
+{
+  "annotations": { "list": [] },
+  "editable": false,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "description": "Disponibilité d'api-core. Les métriques HTTP/transactionnelles seront ajoutées quand api-core exposera prom-client (GOURSI-OBS1 : /metrics sur chaque service).",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": 0 }, { "color": "green", "value": 1 } ] }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "expr": "up{job=\"api-core\"}", "legendFormat": "api-core" }
+      ],
+      "title": "api-core — disponibilité",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["cauripay", "api-core"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "title": "CauriPay — api-core",
+  "uid": "cauripay-api-core",
+  "version": 1
+}

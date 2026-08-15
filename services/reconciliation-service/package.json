@@ -1,0 +1,42 @@
+{
+  "name": "@goursi/reconciliation-service",
+  "version": "0.1.0",
+  "private": true,
+  "description": "reconciliation-service — rapports journaliers COBAC (SUM CREDIT - SUM DEBIT = 0), CSV/PDF, statut BALANCED/UNBALANCED.",
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "nest start --watch",
+    "start": "node dist/main.js",
+    "start:dev": "nest start --watch",
+    "build": "nest build",
+    "test": "jest",
+    "lint": "eslint \"src/**/*.ts\" --max-warnings 0",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.2.0",
+    "@nestjs/config": "^4.0.0",
+    "@nestjs/core": "^11.2.0",
+    "@nestjs/platform-express": "^11.2.0",
+    "@nestjs/swagger": "^11.4.6",
+    "@nestjs/schedule": "^6.0.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.24",
+    "@nestjs/schedule": "^6.0.0",
+    "@nestjs/testing": "^11.2.0",
+    "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.10.1",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

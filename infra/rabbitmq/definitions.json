@@ -1,34 +1,228 @@
 {
   "rabbit_version": "3.13",
   "users": [
-    { "name": "goursi", "password_hash": "", "hashing_algorithm": "rabbit_password_hashing_sha256", "tags": "administrator" }
+    {
+      "name": "goursi",
+      "password_hash": "",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": "administrator"
+    }
   ],
-  "vhosts": [ { "name": "/" } ],
+  "vhosts": [
+    {
+      "name": "/"
+    }
+  ],
   "permissions": [
-    { "user": "goursi", "vhost": "/", "configure": ".*", "write": ".*", "read": ".*" }
+    {
+      "user": "goursi",
+      "vhost": "/",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
   ],
   "exchanges": [
-    { "name": "financial.events", "vhost": "/", "type": "topic", "durable": true, "auto_delete": false, "internal": false, "arguments": {} },
-    { "name": "notification.events", "vhost": "/", "type": "fanout", "durable": true, "auto_delete": false, "internal": false, "arguments": {} },
-    { "name": "kyc.events", "vhost": "/", "type": "topic", "durable": true, "auto_delete": false, "internal": false, "arguments": {} },
-    { "name": "aml.events", "vhost": "/", "type": "topic", "durable": true, "auto_delete": false, "internal": false, "arguments": {} },
-    { "name": "dead.letters", "vhost": "/", "type": "topic", "durable": true, "auto_delete": false, "internal": false, "arguments": {} }
+    {
+      "name": "financial.events",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "notification.events",
+      "vhost": "/",
+      "type": "fanout",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "kyc.events",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "aml.events",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "dead.letters",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "audit.events",
+      "vhost": "/",
+      "type": "fanout",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
   ],
   "queues": [
-    { "name": "q.api-core.transactions", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-dead-letter-exchange": "dead.letters", "x-dead-letter-routing-key": "failed.api-core.transactions" } },
-    { "name": "q.api-core.aml", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-dead-letter-exchange": "dead.letters", "x-dead-letter-routing-key": "failed.api-core.aml" } },
-    { "name": "q.api-core.kyc", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-dead-letter-exchange": "dead.letters", "x-dead-letter-routing-key": "failed.api-core.kyc" } },
-    { "name": "q.business.webhooks", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-dead-letter-exchange": "dead.letters", "x-dead-letter-routing-key": "failed.business.webhooks" } },
-    { "name": "q.notification.dispatch", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-dead-letter-exchange": "dead.letters", "x-dead-letter-routing-key": "failed.notification" } },
-    { "name": "q.dead.letters", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {} }
+    {
+      "name": "q.api-core.transactions",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "dead.letters",
+        "x-dead-letter-routing-key": "failed.api-core.transactions"
+      }
+    },
+    {
+      "name": "q.api-core.aml",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "dead.letters",
+        "x-dead-letter-routing-key": "failed.api-core.aml"
+      }
+    },
+    {
+      "name": "q.api-core.kyc",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "dead.letters",
+        "x-dead-letter-routing-key": "failed.api-core.kyc"
+      }
+    },
+    {
+      "name": "q.business.webhooks",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "dead.letters",
+        "x-dead-letter-routing-key": "failed.business.webhooks"
+      }
+    },
+    {
+      "name": "q.notification.dispatch",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "dead.letters",
+        "x-dead-letter-routing-key": "failed.notification"
+      }
+    },
+    {
+      "name": "q.dead.letters",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "q.aml.risk",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "q.notification.all",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
   ],
   "bindings": [
-    { "source": "financial.events", "vhost": "/", "destination": "q.api-core.transactions", "destination_type": "queue", "routing_key": "transaction.#", "arguments": {} },
-    { "source": "financial.events", "vhost": "/", "destination": "q.business.webhooks", "destination_type": "queue", "routing_key": "transaction.completed", "arguments": {} },
-    { "source": "financial.events", "vhost": "/", "destination": "q.notification.dispatch", "destination_type": "queue", "routing_key": "agent.float.low", "arguments": {} },
-    { "source": "notification.events", "vhost": "/", "destination": "q.notification.dispatch", "destination_type": "queue", "routing_key": "", "arguments": {} },
-    { "source": "kyc.events", "vhost": "/", "destination": "q.api-core.kyc", "destination_type": "queue", "routing_key": "#", "arguments": {} },
-    { "source": "aml.events", "vhost": "/", "destination": "q.api-core.aml", "destination_type": "queue", "routing_key": "alert.#", "arguments": {} },
-    { "source": "dead.letters", "vhost": "/", "destination": "q.dead.letters", "destination_type": "queue", "routing_key": "#", "arguments": {} }
+    {
+      "source": "financial.events",
+      "vhost": "/",
+      "destination": "q.api-core.transactions",
+      "destination_type": "queue",
+      "routing_key": "transaction.#",
+      "arguments": {}
+    },
+    {
+      "source": "financial.events",
+      "vhost": "/",
+      "destination": "q.business.webhooks",
+      "destination_type": "queue",
+      "routing_key": "transaction.completed",
+      "arguments": {}
+    },
+    {
+      "source": "financial.events",
+      "vhost": "/",
+      "destination": "q.notification.dispatch",
+      "destination_type": "queue",
+      "routing_key": "agent.float.low",
+      "arguments": {}
+    },
+    {
+      "source": "notification.events",
+      "vhost": "/",
+      "destination": "q.notification.dispatch",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    },
+    {
+      "source": "kyc.events",
+      "vhost": "/",
+      "destination": "q.api-core.kyc",
+      "destination_type": "queue",
+      "routing_key": "#",
+      "arguments": {}
+    },
+    {
+      "source": "aml.events",
+      "vhost": "/",
+      "destination": "q.api-core.aml",
+      "destination_type": "queue",
+      "routing_key": "alert.#",
+      "arguments": {}
+    },
+    {
+      "source": "dead.letters",
+      "vhost": "/",
+      "destination": "q.dead.letters",
+      "destination_type": "queue",
+      "routing_key": "#",
+      "arguments": {}
+    },
+    {
+      "source": "financial.events",
+      "vhost": "/",
+      "destination": "q.aml.risk",
+      "destination_type": "queue",
+      "routing_key": "transaction.#",
+      "arguments": {}
+    },
+    {
+      "source": "notification.events",
+      "vhost": "/",
+      "destination": "q.notification.all",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    }
   ]
 }

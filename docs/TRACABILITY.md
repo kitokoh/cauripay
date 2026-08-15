@@ -1,9 +1,23 @@
 # TRACABILITY — Matrice spec ↔ backlog
 
-> Générée depuis le backlog GOURSI (134 issues). Mise à jour : 2026-08-14.
+> Générée depuis le backlog GOURSI. Mise à jour : 2026-08-14.
 
-Chaque exigence de la spec est tracée vers une issue ; chaque issue porte sa clé GOURSI dans son corps. Cette matrice est la preuve de couverture de la Phase 0 (GOURSI-QA7).
+## 📊 Statut d'avancement (2026-08-14 — fin de session responsable)
 
+| Bloc | Issues | Fermées | Restantes |
+|---|---|---|---|
+| G0 · Fondation & Infra | #138–#153 | **16/16** ✅ | — |
+| G1 · ledger-service | #154–#180 | **27/27** ✅ | — |
+| G2 · api-core & services réglementaires | #181–#231 | 24/51 | kyc #203–205 · aml #207–208 (025a ✅) · notification #210–213 · ussd #214–217 |
+| G3 · business & reconciliation | #218–#232 | 0/15 | — |
+| G4 · Fronts & Mobile | #233–#254 | 0/22 | — |
+| G5 · Developer Platform | #255–#260 | 0/6 | — |
+| G6 · QA, Sécurité & DoD | #261–#271 | 3/11 | QA4–QA7 |
+| Backlog legacy v0.1 | #1–#56 | **56/56** ✅ (ADR-006) | — |
+
+**Merges de référence :** #272–#278 (gouvernance+G0) · #282/#286 (ADR-005/006/007) · #292/#295 (G1) · #300 (G2 api-core) · #316 (aml-service) · #297 (QA k6/ZAP/audit SQL) · #301/#309 (fixes).
+
+---
 
 ## EPIC (7 issues)
 
@@ -178,3 +192,18 @@ Chaque exigence de la spec est tracée vers une issue ; chaque issue porte sa cl
 | GOURSI-QA5 | #265 | GOURSI-QA5 · Documentation architecture : README v2, DESIGN v2, schémas, ADR |
 | GOURSI-QA6 | #266 | GOURSI-QA6 · Onboarding dev : scripts bootstrap + guide environnement |
 | GOURSI-QA7 | #268 | GOURSI-QA7 · Audit fin de Phase 0 : couverture spec ↔ backlog |
+
+
+## GOURSI-SEC3 — Audit trail des actions sensibles (inventaire)
+
+| Action sensible | Service | Écriture d'audit | Statut |
+|---|---|---|---|
+| Reverse transaction | api-core | AuditLog Prisma + AuditTrailService (TRANSACTION_REVERSE) | ✅ |
+| Approve / reject KYC | kyc-service | AuditTrailService (KYC_APPROVE / KYC_REJECT) | ✅ (helper) |
+| Gel / dégel wallet (AML) | api-core | AuditTrailService (WALLET_FREEZE / WALLET_UNFREEZE) | ✅ (helper) |
+| Rotation / révocation clé API | developer-gateway | AuditTrailService (API_KEY_ROTATE / API_KEY_REVOKE) | ✅ (helper) |
+| Approbation batch bulk | business-service | AuditTrailService (BULK_APPROVE) | ✅ (helper) |
+| Publication consolidée | RabbitMQ | exchange `audit.events` (fanout) — ajouté à infra/rabbitmq/definitions.json | ✅ |
+
+Chaque enregistrement porte : action, actorId, actorRole, targetType, targetId, reason, at (ISO-8601).
+Vue consolidée : consommer `audit.events` (collecteur dédié en staging).

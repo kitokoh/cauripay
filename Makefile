@@ -3,7 +3,13 @@
 SHELL := /bin/bash
 COMPOSE := docker compose
 
-.PHONY: help install setup up down migrate migrate-java migrate-prisma seed test test-ts test-java lint format studio health logs reset audit audit-sql
+# Charge .env s'il existe (variables exportées pour toutes les cibles)
+ifneq (,$(wildcard .env))
+include .env
+export
+endif
+
+.PHONY: help install setup up down migrate migrate-java migrate-prisma seed test test-ts test-java lint validate-env format studio health logs reset audit audit-sql
 
 help: ## Affiche l'aide
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -47,6 +53,9 @@ lint: ## ESLint + Prettier + typecheck TS
 	npm run lint
 	npm run typecheck
 
+validate-env: ## Valide la configuration (toutes les variables .env.example résolues)
+	node scripts/validate-env.mjs
+
 format: ## Prettier --write
 	npm run format
 
@@ -67,3 +76,11 @@ audit-sql: ## Scripts d'audit SQL (GOURSI-QA2) — 0 écart requis
 reset: ## ⚠️ Réinitialise TOUT (données locales détruites)
 	@read -p "Confirmer la réinitialisation complète ? (taper RESET) " ans; \
 	if [ "$$ans" = "RESET" ]; then $(COMPOSE) down -v && echo "✔ Reset effectué"; else echo "Annulé"; fi
+
+load-test: ## GOURSI-QA1 — test de charge k6 (DoD #7 : 1000 tx/min, p95 < 2 s, erreur < 0,1 %)
+	@test -n "$$BASE_URL" || (echo "BASE_URL requis (ex: make load-test BASE_URL=http://localhost:3000)"; exit 1)
+	@k6 run -e BASE_URL=$${BASE_URL} -e VUS=$${VUS:-50} -e DURATION=$${DURATION:-2m} tests/load/p2p-1000tpm.js
+
+zap-baseline: ## GOURSI-QA3 — OWASP ZAP baseline (DoD #10 : 0 vulnérabilité critique)
+	@test -n "$$ZAP_TARGET" || (echo "ZAP_TARGET requis (ex: make zap-baseline ZAP_TARGET=https://staging.goursi.app)"; exit 1)
+	@./tests/security/zap-baseline/run-zap.sh $${ZAP_TARGET}

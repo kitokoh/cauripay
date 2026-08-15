@@ -1,0 +1,68 @@
+// kyc-service — schéma Prisma (GOURSI-024a).
+// Les documents chiffrés sont stockés ici (AES-256-GCM, clé KYC_ENCRYPTION_KEY par environnement).
+// Les enums sont le miroir de @goursi/shared-types (spec §4.4).
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/kyc-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum KycLevel {
+  BASIC
+  VERIFIED
+  PREMIUM
+}
+
+enum KycStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum DocumentType {
+  NATIONAL_ID
+  PASSPORT
+  DRIVER_LICENSE
+  BUSINESS_REGISTRATION
+  UTILITY_BILL
+}
+
+/// Événement de la vie du dossier (audit : qui, quand, quoi).
+model KycAuditLog {
+  id        String   @id @default(uuid())
+  kycId     String
+  kyc       KycRecord @relation(fields: [kycId], references: [id], onDelete: Cascade)
+  actor     String   // userId (sub JWT) qui a agi
+  action    String   // SUBMIT | APPROVE | REJECT
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@index([kycId])
+  @@index([actor])
+}
+
+/// Dossier KYC d'un utilisateur. Documents stockés CHIFFRÉS (jamais en clair).
+model KycRecord {
+  id               String       @id @default(uuid())
+  userId           String
+  level            KycLevel     @default(VERIFIED)
+  documentType     DocumentType
+  documentEncrypted String       // AES-256-GCM : iv:tag:cipher (base64)
+  selfieEncrypted  String?      // AES-256-GCM : iv:tag:cipher (base64)
+  status           KycStatus    @default(PENDING)
+  country          String?
+  rejectReason     String?
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  submittedAt      DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  history          KycAuditLog[]
+
+  @@index([status])
+  @@index([userId])
+  @@index([level])
+}
