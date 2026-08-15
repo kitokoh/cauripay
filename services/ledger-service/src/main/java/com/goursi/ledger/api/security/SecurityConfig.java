@@ -16,13 +16,16 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
   @Bean
-  SecurityFilterChain filterChain(HttpSecurity http, ServiceKeyFilter serviceKeyFilter) throws Exception {
+  SecurityFilterChain filterChain(
+      HttpSecurity http, ServiceKeyFilter serviceKeyFilter, RateLimitFilter rateLimitFilter)
+      throws Exception {
     http
         .csrf(AbstractHttpConfigurer::disable)
         .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
             .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/prometheus", "/actuator/info").permitAll()
             .anyRequest().permitAll()) // l'accès réel est contrôlé par X-Service-Key
+        .addFilterBefore(rateLimitFilter, ServiceKeyFilter.class)
         .addFilterBefore(serviceKeyFilter, UsernamePasswordAuthenticationFilter.class);
     return http.build();
   }
