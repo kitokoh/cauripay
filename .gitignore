@@ -48,3 +48,7 @@ zap-report*
 
 # Outils agents
 .claude/
+services/kyc-service/generated/
+
+# Next.js
+apps/*/.next/

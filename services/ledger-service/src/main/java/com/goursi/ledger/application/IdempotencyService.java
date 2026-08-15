@@ -20,6 +20,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class IdempotencyService {
 
+  /** TTL court du claim (en cours de traitement) — distinct du TTL de résultat. */
+  static final Duration CLAIM_TTL = Duration.ofSeconds(30);
+
   private final RedisIdempotencyStore store;
   private final ObjectMapper objectMapper;
   private final Duration ttl;
@@ -62,7 +65,10 @@ public class IdempotencyService {
       }
       return Claim.IN_FLIGHT; // CLAIMED par un autre appel en cours
     }
-    return store.tryClaim(idempotencyKey, ttl) ? Claim.OK : Claim.IN_FLIGHT;
+    // TTL COURT (30 s) : si le process meurt après le claim mais avant le commit,
+    // la clé se libère après 30 s — un retry légitime redevient possible.
+    // (Le résultat final, lui, garde le TTL long : 24 h.)
+    return store.tryClaim(idempotencyKey, CLAIM_TTL) ? Claim.OK : Claim.IN_FLIGHT;
   }
 
   /** Résultat en cache (appel rejoué). */

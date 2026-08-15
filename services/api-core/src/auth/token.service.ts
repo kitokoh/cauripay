@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { JwtPayload } from '../common/guards/jwt-auth.guard';
-import { User } from '@prisma/client';
+import { User } from '.prisma/api-core-client';
 
 /**
  * Émission de JWT applicatif (dev/MPIN) — signature HS256 avec JWT_SECRET.

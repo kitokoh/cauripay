@@ -18,7 +18,7 @@ import {
   WalletType,
 } from '@goursi/shared-types';
 import { assertTransition } from './transaction-state';
-import { Transaction, User } from '@prisma/client';
+import { Transaction, User } from '.prisma/api-core-client';
 
 /**
  * Orchestration des transactions (GOURSI-023) — ordre exact de la spec :

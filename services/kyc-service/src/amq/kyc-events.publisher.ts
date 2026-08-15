@@ -15,8 +15,8 @@ export class KycEventPublisher implements OnModuleDestroy {
   private channel: Channel | null = null;
   private readonly url: string;
 
-  constructor(config: ConfigService) {
-    this.url = config.get<string>('env.rabbitmqUrl')!;
+  constructor(config?: ConfigService) {
+    this.url = config?.get<string>('env.rabbitmqUrl') ?? process.env.RABBITMQ_URL ?? '';
   }
 
   async publish(routingKey: 'kyc.submitted' | 'kyc.approved' | 'kyc.rejected', payload: Record<string, unknown>): Promise<void> {

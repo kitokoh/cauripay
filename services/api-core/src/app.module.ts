@@ -11,6 +11,7 @@ import { TransactionsModule } from './transactions/transactions.module';
 import { WalletsController } from './wallets/wallets.controller';
 import { LedgerClientService } from './ledger-client/ledger-client.service';
 import { AmqModule } from './amq/amq.module';
+import { AuditModule } from './audit/audit.module';
 import { EnvelopeInterceptor } from './common/interceptors/envelope.interceptor';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -30,6 +31,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     AuthModule,
     TransactionsModule,
     AmqModule,
+    AuditModule,
   ],
   controllers: [HealthController, WalletsController],
   providers: [

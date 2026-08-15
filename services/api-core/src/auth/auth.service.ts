@@ -18,7 +18,7 @@ import {
   WalletType,
 } from '@goursi/shared-types';
 import { validatePhoneNumber } from '@goursi/validation-rules';
-import { User } from '@prisma/client';
+import { User } from '.prisma/api-core-client';
 
 const LOCKOUT_AFTER = 3;
 const LOCKOUT_TTL_SECONDS = 30 * 60; // 30 min
