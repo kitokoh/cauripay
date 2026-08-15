@@ -1,8 +1,20 @@
-import type { FastifyInstance } from 'fastify';
-import { db, qall, qget, qrun } from '../db.js';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
+import { qget } from '../db.js';
 import { getPaymentByCheckoutToken, transition, type PaymentRow } from '../payments.js';
 import { formatMoney, isValidPhone } from '../util.js';
 import { methodById, ALL_METHOD_IDS } from '../registries.js';
+import { clearCheckoutThrottle, isCheckoutBlocked, registerPinFailure } from '../throttle.js';
+
+/** Rate limit par token de checkout (anti-brute-force, complément du compteur PIN). */
+const tokenBucket = (req: FastifyRequest): string => {
+  const token = (req.params as { token?: string }).token;
+  return token ? `ck:${token}` : req.ip;
+};
+const checkoutRateLimit = {
+  config: {
+    rateLimit: { max: 15, timeWindow: '1 minute', keyGenerator: tokenBucket },
+  },
+};
 
 export const esc = (s: unknown): string =>
   String(s ?? '')
@@ -23,11 +35,14 @@ export async function checkoutRoutes(app: FastifyInstance): Promise<void> {
     reply.type('text/html; charset=utf-8').send(renderCheckout(pay, merchant.name, merchant.company));
   });
 
-  app.post('/checkout/:token/initiate', async (req, reply) => {
+  app.post('/checkout/:token/initiate', checkoutRateLimit, async (req, reply) => {
     const { token } = req.params as { token: string };
     const body = (req.body ?? {}) as { phone?: string; method?: string };
     const pay = getPaymentByCheckoutToken(token);
     if (!pay) return reply.code(404).send({ error: { type: 'invalid_request_error', code: 'not_found', message: 'Paiement introuvable.' } });
+    if (isCheckoutBlocked(token)) {
+      return reply.code(429).send({ error: { type: 'rate_limit_error', code: 'checkout_blocked', message: 'Trop de tentatives de paiement. Réessayez plus tard.' } });
+    }
     if (TERMINAL.has(pay.status)) return reply.code(409).send({ error: { type: 'invalid_request_error', code: 'invalid_state', message: 'Paiement déjà terminé.' } });
 
     const phone = body.phone?.trim() ?? '';
@@ -42,21 +57,27 @@ export async function checkoutRoutes(app: FastifyInstance): Promise<void> {
     return { step: 'pin', payment: { id: fresh.id, status: fresh.status, provider: fresh.provider, provider_ref: fresh.provider_ref, amount_minor: fresh.amount_minor, currency: fresh.currency } };
   });
 
-  app.post('/checkout/:token/confirm', async (req, reply) => {
+  app.post('/checkout/:token/confirm', checkoutRateLimit, async (req, reply) => {
     const { token } = req.params as { token: string };
     const body = (req.body ?? {}) as { pin?: string };
     const pay = getPaymentByCheckoutToken(token);
     if (!pay) return reply.code(404).send({ error: { type: 'invalid_request_error', code: 'not_found', message: 'Paiement introuvable.' } });
+    if (isCheckoutBlocked(token)) {
+      return reply.code(429).send({ error: { type: 'rate_limit_error', code: 'checkout_blocked', message: 'Trop de tentatives de paiement. Réessayez plus tard.' } });
+    }
     if (pay.status !== 'processing') return reply.code(409).send({ error: { type: 'invalid_request_error', code: 'invalid_state', message: `Statut actuel : ${pay.status}.` } });
 
     const pin = body.pin ?? '';
     if (!/^\d{4}$/.test(pin)) return reply.code(400).send({ error: { type: 'invalid_request_error', code: 'invalid_request_error', message: 'Le PIN doit contenir 4 chiffres.' } });
 
     // Simulation sandbox : 0000 → échec (flux d'échec démontrable), sinon succès après ~1,5 s.
+    // Anti-brute-force : chaque PIN erroné compte ; au-delà du seuil, le token est bloqué.
     setTimeout(() => {
       if (pin === '0000') {
-        transition(pay.merchant_id, pay.id, 'failed', { reason: 'incorrect_pin' });
+        const blocked = registerPinFailure(token);
+        transition(pay.merchant_id, pay.id, 'failed', { reason: blocked ? 'too_many_attempts' : 'incorrect_pin' });
       } else {
+        clearCheckoutThrottle(token);
         transition(pay.merchant_id, pay.id, 'succeeded', { providerRef: `SIM-${Math.random().toString(36).slice(2, 6).toUpperCase()}` });
       }
     }, 1500);

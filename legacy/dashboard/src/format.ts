@@ -1,18 +1,7 @@
 import type { PaymentStatus } from './api';
+import { currencyByCode, methodById } from './registries';
 
-export const CURRENCIES = ['XOF', 'XAF', 'GNF', 'CDF', 'NGN', 'GHS', 'EUR', 'USD'];
-
-export const METHODS: Record<string, { label: string; emoji: string }> = {
-  orange_money: { label: 'Orange Money', emoji: '🟠' },
-  mtn_momo: { label: 'MTN MoMo', emoji: '🟡' },
-  moov_money: { label: 'Moov Money', emoji: '🔵' },
-  wave: { label: 'Wave', emoji: '🌊' },
-  card: { label: 'Carte (Visa/MC)', emoji: '💳' },
-  international: { label: 'International', emoji: '🌍' },
-};
-
-export const methodLabel = (id: string | null): string =>
-  id ? (METHODS[id]?.label ?? id) : '—';
+export const methodLabel = (id: string | null): string => (id ? (methodById(id)?.label ?? id) : '—');
 
 export const STATUS_LABELS: Record<PaymentStatus, string> = {
   pending: 'En attente',
@@ -33,10 +22,12 @@ export const EVENT_LABELS: Record<string, string> = {
   'webhook.test': 'Ping de test',
 };
 
+/** Formate un montant en unités mineures — décimales issues du registre API (plus de liste dupliquée). */
 export function formatMoney(minor: number, currency: string): string {
-  const zero = ['XOF', 'XAF', 'GNF', 'CDF'];
-  if (zero.includes(currency)) return `${minor.toLocaleString('fr-FR')} ${currency}`;
-  return `${(minor / 100).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
+  const def = currencyByCode(currency);
+  const decimals = def ? def.decimals : 0;
+  if (decimals === 0) return `${minor.toLocaleString('fr-FR')} ${currency}`;
+  return `${(minor / 10 ** decimals).toLocaleString('fr-FR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })} ${currency}`;
 }
 
 export function formatDate(iso: string): string {

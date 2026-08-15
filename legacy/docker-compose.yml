@@ -1,0 +1,19 @@
+# legacy/ — agrégateur v0.1 (API + dashboard) en conteneur
+# Usage : docker compose -f legacy/docker-compose.yml up --build
+services:
+  api:
+    build: .
+    container_name: cauripay-legacy-api
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      HOST: 0.0.0.0
+      JWT_SECRET: ${JWT_SECRET:?Définissez JWT_SECRET (openssl rand -hex 32)}
+      DATABASE_PATH: /app/data/cauripay.db
+    volumes:
+      - cauripay-legacy-data:/app/data
+    restart: unless-stopped
+volumes:
+  cauripay-legacy-data:

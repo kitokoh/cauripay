@@ -1,15 +1,16 @@
 import type { FastifyInstance } from 'fastify';
-import { db, qall, qget, qrun } from '../db.js';
-import { generateApiKey, generateWebhookSecret, requireMerchant } from '../auth.js';
-import { ApiError, createPayment, listPayments, paymentToJson, transition } from '../payments.js';
-import { toIso } from '../util.js';
+import { db, qget, qrun } from '../db.js';
+import { requireMerchant } from '../auth.js';
+import { apiKeyHash, generateApiKey, generateWebhookSecret } from '../secrets.js';
+import { ApiError, createPayment, listPayments, paymentsToJsonMany, paymentToJson, transition, type PaymentRow, type CreatePaymentInput } from '../payments.js';
+import { maskKey, toIso } from '../util.js';
 
 interface MerchantRow {
   id: string;
   pk_test: string;
-  sk_test: string;
+  sk_test_hash: string;
   pk_live: string;
-  sk_live: string;
+  sk_live_hash: string;
   wsec_test: string;
   wsec_live: string;
   live_enabled: number;
@@ -19,16 +20,18 @@ export async function merchantRoutes(app: FastifyInstance): Promise<void> {
   // ---------- Clés API ----------
   // Les clés secrètes ne sont renvoyées qu'au marchand authentifié (JWT), comme Stripe.
 
+  // Les clés sk_ sont hachées au repos : jamais renvoyées en clair ici.
+  // pk_ publiques : affichables. wsec_ : masquées (en clair une seule fois à la création).
   app.get('/api/keys', { preHandler: requireMerchant }, async (req) => {
     const m = qget<MerchantRow>('SELECT * FROM merchants WHERE id = ?', req.merchantId)!;
     return {
       keys: {
         publishable_test: m.pk_test,
-        secret_test: m.sk_test,
         publishable_live: m.pk_live,
-        secret_live: m.sk_live,
-        webhook_secret_test: m.wsec_test,
-        webhook_secret_live: m.wsec_live,
+        webhook_secret_test: maskKey(m.wsec_test),
+        webhook_secret_live: maskKey(m.wsec_live),
+        secret_test_present: true,
+        secret_live_present: true,
       },
       live_enabled: m.live_enabled,
     };
@@ -42,16 +45,16 @@ export async function merchantRoutes(app: FastifyInstance): Promise<void> {
 
     if (scope === 'publishable') {
       const key = generateApiKey('pk', mode);
-      qrun(`UPDATE merchants SET ${mode === 'test' ? 'pk_test' : 'pk_live'} = ?, updated_at = ? WHERE id = ?`, key, toIso(), m.id);;
+      qrun(`UPDATE merchants SET ${mode === 'test' ? 'pk_test' : 'pk_live'} = ?, updated_at = ? WHERE id = ?`, key, toIso(), m.id);
       return { key, scope, mode };
     }
     if (scope === 'webhook') {
       const secret = generateWebhookSecret(mode);
-      qrun(`UPDATE merchants SET ${mode === 'test' ? 'wsec_test' : 'wsec_live'} = ?, updated_at = ? WHERE id = ?`, secret, toIso(), m.id);;
+      qrun(`UPDATE merchants SET ${mode === 'test' ? 'wsec_test' : 'wsec_live'} = ?, updated_at = ? WHERE id = ?`, secret, toIso(), m.id);
       return { key: secret, scope, mode };
     }
     const key = generateApiKey('sk', mode);
-    qrun(`UPDATE merchants SET ${mode === 'test' ? 'sk_test' : 'sk_live'} = ?, updated_at = ? WHERE id = ?`, key, toIso(), m.id);;
+    qrun(`UPDATE merchants SET ${mode === 'test' ? 'sk_test_hash' : 'sk_live_hash'} = ?, updated_at = ? WHERE id = ?`, apiKeyHash(key), toIso(), m.id);
     return { key, scope: 'secret', mode };
   });
 
@@ -60,19 +63,19 @@ export async function merchantRoutes(app: FastifyInstance): Promise<void> {
   app.get('/api/payments', { preHandler: requireMerchant }, async (req) => {
     const q = req.query as { status?: string; limit?: string; before?: string };
     const { rows, hasMore } = listPayments(req.merchantId!, { status: q.status, limit: Number(q.limit) || 25, before: q.before });
-    return { payments: rows.map(paymentToJson), has_more: hasMore };
+    return { payments: paymentsToJsonMany(rows), has_more: hasMore };
   });
 
   app.get('/api/payments/:id', { preHandler: requireMerchant }, async (req) => {
     const { id } = req.params as { id: string };
-    const row = qget('SELECT * FROM payments WHERE id = ? AND merchant_id = ?', id, req.merchantId);;
+    const row = qget<PaymentRow>('SELECT * FROM payments WHERE id = ? AND merchant_id = ?', id, req.merchantId);
     if (!row) throw new ApiError(404, 'not_found', 'Paiement introuvable.');
-    return { payment: paymentToJson(row as never) };
+    return { payment: paymentToJson(row) };
   });
 
   app.post('/api/payments', { preHandler: requireMerchant }, async (req, reply) => {
-    const input = (req.body ?? {}) as never;
-    const { payment, duplicate } = createPayment(req.merchantId!, 'test', input);
+    const input = (req.body ?? {}) as Partial<CreatePaymentInput>;
+    const { payment, duplicate } = createPayment(req.merchantId!, 'test', input as CreatePaymentInput);
     reply.code(duplicate ? 200 : 201);
     return { payment: paymentToJson(payment), duplicate };
   });
@@ -87,7 +90,7 @@ export async function merchantRoutes(app: FastifyInstance): Promise<void> {
 
   app.post('/api/sandbox/payments/:id/approve', { preHandler: requireMerchant }, async (req) => {
     const { id } = req.params as { id: string };
-    const pay = qget<{ status: string }>('SELECT * FROM payments WHERE id = ? AND merchant_id = ?', id, req.merchantId);
+    const pay = qget<PaymentRow>('SELECT * FROM payments WHERE id = ? AND merchant_id = ?', id, req.merchantId);
     if (!pay) throw new ApiError(404, 'not_found', 'Paiement introuvable.');
     if (pay.status === 'pending') transition(req.merchantId!, id, 'processing');
     const row = transition(req.merchantId!, id, 'succeeded', { providerRef: `SIM-${Math.random().toString(36).slice(2, 6).toUpperCase()}` });
@@ -144,7 +147,7 @@ export async function merchantRoutes(app: FastifyInstance): Promise<void> {
         success_rate: totals.count > 0 ? totals.succeeded / totals.count : 0,
       },
       by_day: byDay,
-      recent: rows.map(paymentToJson),
+      recent: paymentsToJsonMany(rows),
     };
   });
 }

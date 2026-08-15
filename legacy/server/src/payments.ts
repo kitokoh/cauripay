@@ -36,11 +36,12 @@ export class ApiError extends Error {
   }
 }
 
-export function paymentToJson(row: PaymentRow): Record<string, unknown> {
-  const timeline = (
-    qall<{ type: string; created_at: string }>('SELECT type, created_at FROM events WHERE payment_id = ? ORDER BY created_at ASC, rowid ASC', row.id)
-  ).map((e) => ({ type: e.type, created_at: e.created_at }));
+export interface TimelineEntry {
+  type: string;
+  created_at: string;
+}
 
+function paymentToJsonWithTimeline(row: PaymentRow, timeline: TimelineEntry[]): Record<string, unknown> {
   return {
     id: row.id,
     status: row.status,
@@ -60,6 +61,33 @@ export function paymentToJson(row: PaymentRow): Record<string, unknown> {
     updated_at: row.updated_at,
     timeline,
   };
+}
+
+export function paymentToJson(row: PaymentRow): Record<string, unknown> {
+  const timeline = (
+    qall<TimelineEntry>('SELECT type, created_at FROM events WHERE payment_id = ? ORDER BY created_at ASC, rowid ASC', row.id)
+  );
+  return paymentToJsonWithTimeline(row, timeline);
+}
+
+/**
+ * Sérialisation en lot : une SEULE requête timeline pour tous les paiements
+ * (évite le N+1 dans les listes, issue #48).
+ */
+export function paymentsToJsonMany(rows: PaymentRow[]): Record<string, unknown>[] {
+  if (rows.length === 0) return [];
+  const ids = rows.map((r) => r.id);
+  const events = qall<{ payment_id: string } & TimelineEntry>(
+    `SELECT payment_id, type, created_at FROM events WHERE payment_id IN (${ids.map(() => '?').join(',')}) ORDER BY created_at ASC, rowid ASC`,
+    ...ids,
+  );
+  const byPayment = new Map<string, TimelineEntry[]>();
+  for (const e of events) {
+    const arr = byPayment.get(e.payment_id) ?? [];
+    arr.push({ type: e.type, created_at: e.created_at });
+    byPayment.set(e.payment_id, arr);
+  }
+  return rows.map((r) => paymentToJsonWithTimeline(r, byPayment.get(r.id) ?? []));
 }
 
 export function publicCheckoutBase(): string {
@@ -189,12 +217,23 @@ export function createPayment(merchantId: string, mode: 'test' | 'live', input: 
     created_at: now,
     updated_at: now,
   };
-  qrun(
-    `INSERT INTO payments (id, merchant_id, amount_minor, currency, methods, status, provider, provider_ref, phone, description, metadata, redirect_url, idempotency_key, mode, checkout_token, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    payment.id, payment.merchant_id, payment.amount_minor, payment.currency, payment.methods, payment.status,
-    payment.provider, payment.provider_ref, payment.phone, payment.description, payment.metadata,
-    payment.redirect_url, payment.idempotency_key, payment.mode, payment.checkout_token, payment.created_at, payment.updated_at);
+  try {
+    qrun(
+      `INSERT INTO payments (id, merchant_id, amount_minor, currency, methods, status, provider, provider_ref, phone, description, metadata, redirect_url, idempotency_key, mode, checkout_token, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      payment.id, payment.merchant_id, payment.amount_minor, payment.currency, payment.methods, payment.status,
+      payment.provider, payment.provider_ref, payment.phone, payment.description, payment.metadata,
+      payment.redirect_url, payment.idempotency_key, payment.mode, payment.checkout_token, payment.created_at, payment.updated_at);
+  } catch (e) {
+    // Deux POST simultanés avec la même Idempotency-Key : l'UNIQUE(merchant, clé)
+    // fait échouer le second INSERT → on renvoie le paiement existant (jamais de 500, #47).
+    const isUnique = (e as { errcode?: number; message?: string })?.errcode === 2067 ||
+      /unique constraint/i.test((e as { message?: string })?.message ?? '');
+    if (!isUnique || !idemKey) throw e;
+    const dup = qget<PaymentRow>('SELECT * FROM payments WHERE merchant_id = ? AND idempotency_key = ?', merchantId, idemKey);
+    if (dup) return { payment: dup, duplicate: true };
+    throw e;
+  }
 
   emitEvent(payment.id, 'payment.created', { payment: paymentToJson(payment) });
   void dispatchEvent(merchantId, mode, 'payment.created', { payment: paymentToJson(payment) });

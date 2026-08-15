@@ -19,7 +19,8 @@ Header `Authorization: Bearer <jwt>` obtenu via `/api/auth/login` ou `/api/auth/
 ```json
 { "name": "Awa Diallo", "company": "Kora Labs", "email": "awa@kora.app", "password": "••••••••" }
 ```
-→ `200` `{ "token": "<jwt>", "merchant": { "id", "name", "company", "email", "created_at" } }`
+→ `201` `{ "token": "<jwt>", "merchant": {…}, "keys": { "publishable_test", "secret_test", "publishable_live", "secret_live", "webhook_secret_test", "webhook_secret_live" } }`
+> ⚠️ Les clés `sk_` sont **hachées au repos** (jamais stockées en clair) : la valeur en clair n'est renvoyée **qu'une seule fois**, ici et lors des rotations. Copiez-les immédiatement (modèle Stripe).
 Erreurs : `400` champs manquants/invalides, `409` email déjà utilisé.
 
 ### POST /api/auth/login
@@ -42,16 +43,16 @@ Le dashboard utilise des endpoints dédiés (JWT) — les clés API restent pour
 → `200`
 ```json
 { "keys": {
-    "publishable_test": "pk_test_…", "secret_test": "sk_test_…",
-    "publishable_live": "pk_live_…", "secret_live": "sk_live_…",
-    "webhook_secret_test": "whsec_test_…", "webhook_secret_live": "whsec_live_…"
+    "publishable_test": "pk_test_…", "publishable_live": "pk_live_…",
+    "webhook_secret_test": "whsec_test_••••••••wxyz", "webhook_secret_live": "…",
+    "secret_test_present": true, "secret_live_present": true
 }}
 ```
-Les clés secrètes sont renvoyées en clair **uniquement au marchand authentifié** (comme Stripe) — jamais dans les réponses de l'API publique.
+Les clés `sk_` ne sont **jamais renvoyées** par cet endpoint (hachées au repos) : seule leur présence est indiquée. Les secrets webhook sont **masqués** (en clair une seule fois à la création d'un webhook).
 
 ### POST /api/keys/rotate
 `{ "mode": "test"|"live", "scope": "publishable"|"secret"|"webhook" }` → `200` `{ "key": "<nouvelle valeur en clair (une seule fois)>" }`
-La clé correspondante est régénérée ; l'ancienne cesse d'être valide immédiatement.
+La clé correspondante est régénérée ; l'ancienne cesse d'être valide immédiatement. **Conservez la réponse** : c'est la seule fois où la nouvelle valeur est visible.
 
 ### GET /api/stats
 → `200`
@@ -68,6 +69,8 @@ La clé correspondante est régénérée ; l'ancienne cesse d'être valide immé
 ### POST /api/webhooks
 `{ "url": "https://exemple.com/hooks", "events": ["*"] | ["payment.succeeded", "payment.failed"], "mode": "test" }`
 → `201` webhook complet (secret inclus, une seule fois). La signature HMAC utilise ce secret.
+- **Limite** : 10 webhooks max par compte et par mode (défaut, configurable) → `400 webhook_limit_exceeded`.
+- **Anti-SSRF** : en production, les URL vers des IP privées/locales (127.0.0.1, RFC 1918, link-local…) sont **refusées**, et `https` est exigé. En dev, `ALLOW_PRIVATE_WEBHOOKS=true` / `ALLOW_INSECURE_WEBHOOKS=true` pour les tunnels locaux.
 
 ### PATCH /api/webhooks/:id `{ "active": 0|1 }` → `{ webhook }`
 ### DELETE /api/webhooks/:id → `{ "ok": true }`
@@ -161,13 +164,20 @@ Header : `X-CauriPay-Signature: t=1789123456,v1=<hex>` où `<hex>` = HMAC-SHA256
 | GET | `/checkout/:token` | — | HTML (page paiement) |
 | POST | `/checkout/:token/initiate` | `{ "phone": "+2250708091011" }` | `{ "step": "pin", "payment": { id, amount_minor, currency, provider, status } }` |
 | POST | `/checkout/:token/confirm` | `{ "pin": "1234" }` | `{ "status": "processing" }` (succès auto ~1,5 s ; PIN `0000` → échec) |
+| POST | `/checkout/:token/initiate` | — | `429 checkout_blocked` après trop d'échecs de PIN (anti-brute-force) |
 | GET | `/checkout/:token/status` | — | `{ "status", "amount_minor", "currency", "description", "provider_label" }` (polling) |
 
 ## 9. Codes d'erreur normalisés
 
 ```json
-{ "error": { "type": "invalid_request_error"|"authentication_error"|"permission_error"|"api_error",
-             "code": "invalid_amount"|"unknown_currency"|"unknown_method"|"idempotency_conflict"|"invalid_state"|"not_found"|"unauthorized"|"live_not_enabled",
+{ "error": { "type": "invalid_request_error"|"authentication_error"|"permission_error"|"rate_limit_error"|"api_error",
+             "code": "invalid_amount"|"unknown_currency"|"unknown_method"|"idempotency_conflict"|"invalid_state"|"not_found"|"unauthorized"|"live_not_enabled"|"webhook_limit_exceeded"|"invalid_webhook_url"|"checkout_blocked",
              "message": "…" } }
 ```
-Statuts : `400` requête invalide · `401` clé/jeton manquant ou invalide · `403` permission (sk requis, live non activé) · `404` introuvable · `409` conflit d'état/idempotence · `429` rate limit · `5xx` erreur interne.
+Statuts : `400` requête invalide · `401` clé/jeton manquant ou invalide · `403` permission (sk requis, live non activé) · `404` introuvable · `409` conflit d'état/idempotence · `429` rate limit **par clé API** sur `/api/v1` (défaut 1 000 req/min) ou blocage anti-brute-force checkout · `5xx` erreur interne.
+
+### Cas limites
+- **`429`** : réessayer avec backoff (`Retry-After`). Le quota est **par clé API** (pas par IP) sur `/api/v1`.
+- **`409 duplicate`** : renvoie le paiement existant avec `"duplicate": true` (200) — voir §4. Un conflit concurrent sur la même `Idempotency-Key` ne produit **jamais** de 500.
+- **Timeouts** : un webhook sortant est abandonné après 8 s ; 4 tentatives avec backoff (1 s / 5 s / 30 s / 5 min) ; les retries **survivent au redémarrage** du serveur.
+- **Idempotence** : les clés `Idempotency-Key` sont garanties uniques par marchand ; les doublons simultanés retournent le même paiement.

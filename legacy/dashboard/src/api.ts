@@ -1,6 +1,7 @@
 // ---------- Client API + jeton JWT ----------
 
 const TOKEN_KEY = 'cauripay_token';
+const SK_KEY = 'cauripay_sk_test';
 
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
@@ -10,6 +11,21 @@ export function setToken(t: string): void {
 }
 export function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY);
+}
+
+/**
+ * Clé secrète de test : stockée localement car le serveur ne la conserve JAMAIS
+ * en clair (hachée au repos — modèle Stripe). Elle n'est reçue qu'une seule fois
+ * (création de compte / rotation) puis conservée côté client pour piloter /api/v1.
+ */
+export function getSkTest(): string | null {
+  return localStorage.getItem(SK_KEY);
+}
+export function setSkTest(key: string): void {
+  localStorage.setItem(SK_KEY, key);
+}
+export function clearSkTest(): void {
+  localStorage.removeItem(SK_KEY);
 }
 
 export interface ApiErrorBody {
@@ -41,26 +57,26 @@ export async function request<T>(path: string, opts: { method?: string; body?: u
   const json = (await res.json().catch(() => null)) as T & ApiErrorBody;
   if (!res.ok) {
     const msg = json?.error?.message || `Erreur ${res.status}`;
-    if (res.status === 401) clearToken();
+    if (res.status === 401) {
+      clearToken();
+      clearSkTest();
+    }
     throw new ApiError(res.status, json?.error?.code || 'error', msg);
   }
   return json;
 }
 
-// ---------- Appels API développeur (clé sk_test, en mémoire) ----------
+// ---------- Appels API développeur (clé sk_test locale) ----------
 
-let cachedSkTest: string | null = null;
-
-export async function getSkTest(): Promise<string> {
-  if (cachedSkTest) return cachedSkTest;
-  const data = await request<{ keys: { secret_test: string } }>('/keys');
-  cachedSkTest = data.keys.secret_test;
-  return cachedSkTest;
+export async function requireSkTest(): Promise<string> {
+  const sk = getSkTest();
+  if (sk) return sk;
+  throw new ApiError(400, 'no_sk_test', "Clé secrète de test introuvable localement — régénérez-la dans Clés API (elle n'est affichée qu'une seule fois).");
 }
 
 /** Requête vers l'API développeur /api/v1 avec la clé secrète de test. */
 export async function apiV1<T>(path: string, opts: { method?: string; body?: unknown } = {}): Promise<T> {
-  const sk = await getSkTest();
+  const sk = await requireSkTest();
   const headers: Record<string, string> = { Authorization: `Bearer ${sk}` };
   if (opts.body !== undefined) headers['Content-Type'] = 'application/json';
   const res = await fetch(`/api/v1${path}`, {

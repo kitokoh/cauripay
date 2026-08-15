@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { apiV1, request, type Payment, type PaymentStatus } from '../api';
-import { CURRENCIES, METHODS, formatDate, formatMoney, shortId } from '../format';
+import { currencyCodes, loadRegistries, methodMap } from '../registries';
+import { formatDate, formatMoney, shortId } from '../format';
 import { PageHead } from '../components/Layout';
 import { EmptyState, Spinner } from '../components/StatCard';
 import { StatusBadge } from '../components/StatusBadge';
@@ -13,6 +14,11 @@ export function PaymentsPage(): JSX.Element {
   const [payments, setPayments] = useState<Payment[] | null>(null);
   const [status, setStatus] = useState(params.get('status') || '');
   const [showNew, setShowNew] = useState(params.get('new') === '1');
+  const [methods, setMethods] = useState<Record<string, { label: string; emoji: string }>>(() => methodMap());
+
+  useEffect(() => {
+    void loadRegistries().then(() => setMethods(methodMap()));
+  }, []);
 
   const load = () => {
     const q = status ? `?status=${status}` : '';
@@ -82,7 +88,7 @@ export function PaymentsPage(): JSX.Element {
                   <td><Link to={`/app/payments/${p.id}`} className="mono">{shortId(p.id)}</Link></td>
                   <td>{p.description || '—'}</td>
                   <td className="mono">{formatMoney(p.amount_minor, p.currency)}</td>
-                  <td>{p.provider ? (METHODS[p.provider]?.label ?? p.provider) : '—'}</td>
+                  <td>{p.provider ? (methods[p.provider]?.label ?? p.provider) : '—'}</td>
                   <td><StatusBadge status={p.status} /></td>
                   <td className="muted">{formatDate(p.created_at)}</td>
                 </tr>
@@ -112,12 +118,14 @@ export function PaymentsPage(): JSX.Element {
 function NewPaymentModal({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => void }): JSX.Element {
   const [amountMinor, setAmountMinor] = useState('25000');
   const [currency, setCurrency] = useState('XOF');
-  const [methods, setMethods] = useState<string[]>(Object.keys(METHODS));
+
   const [description, setDescription] = useState('');
   const [redirectUrl, setRedirectUrl] = useState('');
   const [idemKey, setIdemKey] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  // Méthodes sélectionnées pour le nouveau paiement (défaut : toutes, issues du registre API).
+  const [methods, setMethods] = useState<string[]>(() => Object.keys(methodMap()));
 
   const toggle = (m: string) => setMethods((prev) => (prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m]));
 
@@ -155,7 +163,7 @@ function NewPaymentModal({ onClose, onCreated }: { onClose: () => void; onCreate
         <div>
           <label>Devise</label>
           <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="select">
-            {CURRENCIES.map((c) => (
+            {currencyCodes().map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
@@ -163,7 +171,7 @@ function NewPaymentModal({ onClose, onCreated }: { onClose: () => void; onCreate
         <div className="full">
           <label>Méthodes acceptées</label>
           <div className="methods-grid">
-            {Object.entries(METHODS).map(([id, m]) => (
+            {Object.entries(methodMap()).map(([id, m]) => (
               <label key={id} className={`method-chip ${methods.includes(id) ? 'on' : ''}`}>
                 <input type="checkbox" checked={methods.includes(id)} onChange={() => toggle(id)} />
                 {m.emoji} {m.label}

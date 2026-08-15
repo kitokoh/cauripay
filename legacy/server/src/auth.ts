@@ -1,8 +1,9 @@
-import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { config } from './config.js';
-import { db, qall, qget, qrun } from './db.js';
+import { qget } from './db.js';
+import { apiKeyHash } from './secrets.js';
 
 // ---------- Mots de passe (scrypt natif) ----------
 
@@ -49,16 +50,6 @@ export async function requireMerchant(req: FastifyRequest, reply: FastifyReply):
 
 // ---------- Clés API ----------
 
-export const sha256hex = (s: string): string => createHash('sha256').update(s).digest('hex');
-
-export function generateApiKey(prefix: 'pk' | 'sk', mode: 'test' | 'live'): string {
-  return `${prefix}_${mode}_${randomBytes(18).toString('base64url').replace(/-/g, 'A').replace(/_/g, 'B')}`;
-}
-
-export function generateWebhookSecret(mode: 'test' | 'live'): string {
-  return `whsec_${mode}_${randomBytes(18).toString('base64url').replace(/-/g, 'A').replace(/_/g, 'B')}`;
-}
-
 export interface ApiKeyContext {
   merchantId: string;
   mode: 'test' | 'live';
@@ -68,6 +59,7 @@ export interface ApiKeyContext {
 /**
  * Résout une clé API (pk_/sk_) vers un contexte marchand.
  * Les sk_ sont stockées hachées (sha256) : la comparaison se fait sur le hash.
+ * Les pk_ sont publiques par nature (affichage dashboard) : stockées en clair.
  */
 export function resolveApiKey(header: string | undefined): ApiKeyContext | null {
   if (!header?.startsWith('Bearer ')) return null;
@@ -76,8 +68,14 @@ export function resolveApiKey(header: string | undefined): ApiKeyContext | null 
   if (!m) return null;
   const scope = m[1];
   const mode = m[2] as 'test' | 'live';
-  const col = scope === 'sk' ? (mode === 'test' ? 'sk_test' : 'sk_live') : mode === 'test' ? 'pk_test' : 'pk_live';
-  const row = qget<{ id: string }>(`SELECT id FROM merchants WHERE ${col} = ?`, key);
+  let row: { id: string } | undefined;
+  if (scope === 'sk') {
+    const col = mode === 'test' ? 'sk_test_hash' : 'sk_live_hash';
+    row = qget<{ id: string }>(`SELECT id FROM merchants WHERE ${col} = ?`, apiKeyHash(key));
+  } else {
+    const col = mode === 'test' ? 'pk_test' : 'pk_live';
+    row = qget<{ id: string }>(`SELECT id FROM merchants WHERE ${col} = ?`, key);
+  }
   if (!row) return null;
   return { merchantId: row.id, mode, scope: scope === 'sk' ? 'secret' : 'publishable' };
 }
