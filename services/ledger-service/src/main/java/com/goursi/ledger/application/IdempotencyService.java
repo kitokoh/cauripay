@@ -16,12 +16,16 @@ import org.springframework.stereotype.Service;
  * - Vérifiée AVANT toute écriture (dans la transaction).
  * - Claim atomique Redis (SET NX) → deux appels concurrents : un seul passe.
  * - Résultat stocké après succès (jamais de poison d'une transaction annulée).
+ *
+ * <p>Le claim utilise un TTL COURT (30 s) distinct du TTL du résultat (24 h) :
+ * si le process meurt après le claim mais avant le commit (crash, redeploy),
+ * la clé redevient libre après 30 s au lieu de rester bloquée 24 h (issue #341).</p>
  */
 @Service
 public class IdempotencyService {
 
-  /** TTL court du claim (en cours de traitement) — distinct du TTL de résultat. */
-  static final Duration CLAIM_TTL = Duration.ofSeconds(30);
+  /** TTL court du claim : au-delà, on considère le process gagnant comme mort. */
+  private static final Duration CLAIM_TTL = Duration.ofSeconds(30);
 
   private final RedisIdempotencyStore store;
   private final ObjectMapper objectMapper;
@@ -65,9 +69,6 @@ public class IdempotencyService {
       }
       return Claim.IN_FLIGHT; // CLAIMED par un autre appel en cours
     }
-    // TTL COURT (30 s) : si le process meurt après le claim mais avant le commit,
-    // la clé se libère après 30 s — un retry légitime redevient possible.
-    // (Le résultat final, lui, garde le TTL long : 24 h.)
     return store.tryClaim(idempotencyKey, CLAIM_TTL) ? Claim.OK : Claim.IN_FLIGHT;
   }
 
