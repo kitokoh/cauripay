@@ -12,3 +12,4 @@ export async function GET() {
   res.cookies.set('oidc_nonce', nonce, { httpOnly: true, sameSite: 'lax' });
   return res;
 }
+export const dynamic = 'force-dynamic';

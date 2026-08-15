@@ -42,3 +42,4 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/login?error=1', request.url));
   }
 }
+export const dynamic = 'force-dynamic';

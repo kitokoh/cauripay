@@ -2,6 +2,7 @@
 // Règle : JAMAIS de solde ici — la vérité des soldes est dans ledger-service.
 generator client {
   provider = "prisma-client-js"
+  output   = "../../node_modules/.prisma/api-core-client"
 }
 
 datasource db {
