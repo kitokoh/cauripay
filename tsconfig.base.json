@@ -3,8 +3,9 @@
     "target": "ES2022",
     "module": "commonjs",
     "moduleResolution": "node",
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "declaration": true,
+    "jsx": "react-jsx",
     "removeComments": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
@@ -29,5 +30,5 @@
       "@goursi/payment-rail-contracts/*": ["packages/payment-rail-contracts/src/*"]
     }
   },
-  "exclude": ["node_modules", "dist", "legacy"]
+  "exclude": ["node_modules", "dist", "legacy", "apps"]
 }

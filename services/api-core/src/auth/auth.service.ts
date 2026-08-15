@@ -9,7 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TokenService } from './token.service';
 import { RedisClient, REDIS } from '../prisma/redis.module';
 import { Inject } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
+import { hashSecret, verifySecret } from './password.util';
 import { randomInt } from 'node:crypto';
 import {
   KycLevel,
@@ -18,9 +18,8 @@ import {
   WalletType,
 } from '@goursi/shared-types';
 import { validatePhoneNumber } from '@goursi/validation-rules';
-import { User } from '@prisma/client';
+import { User } from '.prisma/api-core-client';
 
-const BCRYPT_ROUNDS = 12;
 const LOCKOUT_AFTER = 3;
 const LOCKOUT_TTL_SECONDS = 30 * 60; // 30 min
 const OTP_TTL_SECONDS = 5 * 60; // 5 min
@@ -55,7 +54,7 @@ export class AuthService {
       throw new ConflictException({ code: 'PHONE_TAKEN', message: 'Ce numéro est déjà inscrit' });
     }
 
-    const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
+    const passwordHash = hashSecret(dto.password);
     const accountNumber = dto.phone.replace('+', ''); // 235XXXXXXXX → accountNumber unique
 
     // ADR-003 : wallet créé à l'inscription (BASIC), tout ou rien
@@ -107,7 +106,7 @@ export class AuthService {
     }
 
     const user = await this.prisma.user.findUnique({ where: { phone: dto.phone } });
-    if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) {
+    if (!user || !verifySecret(dto.password, user.passwordHash)) {
       const attempts = await this.redis.incr(`auth:fail:${dto.phone}`);
       if (attempts === 1) {
         await this.redis.expire(`auth:fail:${dto.phone}`, LOCKOUT_TTL_SECONDS);
@@ -141,7 +140,7 @@ export class AuthService {
 
   async sendOtp(user: User, purpose: 'LOGIN' | 'CASH_IN' | 'CASH_OUT'): Promise<void> {
     const code = randomInt(100000, 999999).toString();
-    const codeHash = await bcrypt.hash(code, 10);
+    const codeHash = hashSecret(code);
     await this.redis.set(`otp:${purpose}:${user.phone}`, codeHash, 'EX', OTP_TTL_SECONDS);
     await this.prisma.otp.create({
       data: {
@@ -159,7 +158,7 @@ export class AuthService {
     const purpose = dto.purpose ?? 'LOGIN';
     const key = `otp:${purpose}:${dto.phone}`;
     const hash = await this.redis.get(key);
-    if (!hash || !(await bcrypt.compare(dto.code, hash))) {
+    if (!hash || !verifySecret(dto.code, hash)) {
       throw new BadRequestException({ code: 'INVALID_OTP', message: 'OTP invalide ou expiré' });
     }
     await this.redis.del(key);
@@ -193,12 +192,12 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException({ code: 'NOT_FOUND', message: 'Utilisateur inconnu' });
     }
-    if (dto.oldMpin && user.mPinHash && !(await bcrypt.compare(dto.oldMpin, user.mPinHash))) {
+    if (dto.oldMpin && user.mPinHash && !verifySecret(dto.oldMpin, user.mPinHash)) {
       throw new BadRequestException({ code: 'INVALID_MPIN', message: 'Ancien MPIN incorrect' });
     }
     await this.prisma.user.update({
       where: { id: userId },
-      data: { mPinHash: await bcrypt.hash(dto.newMpin, 10) },
+      data: { mPinHash: hashSecret(dto.newMpin) },
     });
     await this.prisma.auditLog.create({
       data: { resourceType: 'User', resourceId: userId, action: 'CHANGE_MPIN', actorId: userId },
