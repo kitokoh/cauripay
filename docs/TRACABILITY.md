@@ -192,3 +192,18 @@
 | GOURSI-QA5 | #265 | GOURSI-QA5 · Documentation architecture : README v2, DESIGN v2, schémas, ADR |
 | GOURSI-QA6 | #266 | GOURSI-QA6 · Onboarding dev : scripts bootstrap + guide environnement |
 | GOURSI-QA7 | #268 | GOURSI-QA7 · Audit fin de Phase 0 : couverture spec ↔ backlog |
+
+
+## GOURSI-SEC3 — Audit trail des actions sensibles (inventaire)
+
+| Action sensible | Service | Écriture d'audit | Statut |
+|---|---|---|---|
+| Reverse transaction | api-core | AuditLog Prisma + AuditTrailService (TRANSACTION_REVERSE) | ✅ |
+| Approve / reject KYC | kyc-service | AuditTrailService (KYC_APPROVE / KYC_REJECT) | ✅ (helper) |
+| Gel / dégel wallet (AML) | api-core | AuditTrailService (WALLET_FREEZE / WALLET_UNFREEZE) | ✅ (helper) |
+| Rotation / révocation clé API | developer-gateway | AuditTrailService (API_KEY_ROTATE / API_KEY_REVOKE) | ✅ (helper) |
+| Approbation batch bulk | business-service | AuditTrailService (BULK_APPROVE) | ✅ (helper) |
+| Publication consolidée | RabbitMQ | exchange `audit.events` (fanout) — ajouté à infra/rabbitmq/definitions.json | ✅ |
+
+Chaque enregistrement porte : action, actorId, actorRole, targetType, targetId, reason, at (ISO-8601).
+Vue consolidée : consommer `audit.events` (collecteur dédié en staging).
