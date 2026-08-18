@@ -41,7 +41,7 @@ jobs:
           fi
       - name: Trivy scan (api-core)
         if: hashFiles('services/api-core/**') != ''
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@0.36.0
         with:
           image-ref: goursi-api-core:ci
           format: table
@@ -50,7 +50,7 @@ jobs:
           severity: CRITICAL,HIGH
       - name: Trivy scan (ledger)
         if: hashFiles('services/ledger-service/pom.xml') != ''
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@0.36.0
         with:
           image-ref: goursi-ledger:ci
           format: table
@@ -66,7 +66,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
       - run: npm ci --no-audit --no-fund
       - run: npm audit --audit-level=high
         continue-on-error: true # non bloquant en Phase 0 (tri manuel documenté)
