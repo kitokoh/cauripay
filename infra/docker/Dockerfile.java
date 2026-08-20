@@ -6,10 +6,10 @@
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app
 # 1. Dépendances (cache de couches)
-COPY services/ledger-service/pom.xml ./
+COPY pom.xml ./
 RUN mvn -q -B dependency:go-offline -DskipTests
 # 2. Sources + build
-COPY services/ledger-service/src ./src
+COPY src ./src
 RUN mvn -q -B clean package -DskipTests
 
 FROM eclipse-temurin:21-jre AS runtime
