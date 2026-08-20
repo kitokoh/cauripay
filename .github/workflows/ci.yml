@@ -17,9 +17,9 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
       - run: npm ci --no-audit --no-fund
       - name: ESLint
@@ -38,9 +38,9 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
       - run: npm ci --no-audit --no-fund
       - name: Build (tous les workspaces TS)
@@ -54,7 +54,7 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
@@ -72,7 +72,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - name: Install + tests legacy/server
@@ -101,7 +101,7 @@ jobs:
           --health-retries 10
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         if: hashFiles('services/ledger-service/pom.xml') != ''
         with:
           distribution: temurin
@@ -112,8 +112,11 @@ jobs:
         working-directory: services/ledger-service
         env:
           LEDGER_DATABASE_URL: jdbc:postgresql://localhost:5432/goursi_ledger
-          LEDGER_DATABASE_USER: goursi
-          LEDGER_DATABASE_PASSWORD: test
+          # Le plugin flyway-maven-plugin lit POSTGRES_USER/POSTGRES_PASSWORD
+          # (pom.xml) — les noms LEDGER_DATABASE_* n'étaient pas consommés
+          # (user 'null' → échec SCRAM).
+          POSTGRES_USER: goursi
+          POSTGRES_PASSWORD: test
           INTERNAL_SERVICE_KEY: ci_audit_key
         run: mvn -B -q flyway:migrate
       - name: Audit immutabilité (GOURSI-QA2)

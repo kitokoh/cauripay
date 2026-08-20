@@ -25,7 +25,9 @@
         "../../packages/shared-types/src/index.ts"
       ]
     },
-    "baseUrl": "."
+    "baseUrl": ".",
+    "resolveJsonModule": true,
+    "isolatedModules": true
   },
   "include": [
     "next-env.d.ts",
