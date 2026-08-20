@@ -1,10 +1,10 @@
 # ── Étapes ─────────────────────────────────────────────────────────────────────
-# build : node:20-alpine, npm ci, compilation TS
-# runtime : node:20-alpine, npm ci --omit=dev, dist seul, user non-root (uid 1000)
+# build : node:22-alpine, npm ci, compilation TS
+# runtime : node:22-alpine, npm ci --omit=dev, dist seul, user non-root (uid 1000)
 # Usage : docker build -f infra/docker/Dockerfile.nestjs services/<nom-service>
 # Règle : l'image reçoit BUILD_SERVICE=<nom> pour cibler le workspace.
 
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 WORKDIR /app
 ARG BUILD_SERVICE
 ENV BUILD_SERVICE=${BUILD_SERVICE}
@@ -20,7 +20,7 @@ COPY services/${BUILD_SERVICE} services/${BUILD_SERVICE}
 COPY tsconfig.base.json ./
 RUN npm run build --workspace=@goursi/${BUILD_SERVICE} || npx tsc -p services/${BUILD_SERVICE}/tsconfig.json
 
-FROM node:20-alpine AS runtime
+FROM node:22-alpine AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 RUN addgroup -S -g 1000 goursi && adduser -S -u 1000 -G goursi goursi
