@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -17,6 +19,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * Ne jamais logger la clé.
  */
 @Component
+@Order(Ordered.HIGHEST_PRECEDENCE + 10)
 public class ServiceKeyFilter extends OncePerRequestFilter {
 
   private final byte[] expectedKey;

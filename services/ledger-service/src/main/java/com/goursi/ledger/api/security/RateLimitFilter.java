@@ -10,6 +10,8 @@ import java.security.MessageDigest;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -22,6 +24,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * - Whitelist /actuator/* (health/prometheus/info) : jamais limité.
  */
 @Component
+@Order(Ordered.HIGHEST_PRECEDENCE + 10)
 public class RateLimitFilter extends OncePerRequestFilter {
 
   private static final long WINDOW_MS = 60_000L;
