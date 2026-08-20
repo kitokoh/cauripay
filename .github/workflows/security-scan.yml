@@ -41,7 +41,7 @@ jobs:
           fi
       - name: Trivy scan (api-core)
         if: hashFiles('services/api-core/**') != ''
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: goursi-api-core:ci
           format: table
@@ -50,7 +50,7 @@ jobs:
           severity: CRITICAL,HIGH
       - name: Trivy scan (ledger)
         if: hashFiles('services/ledger-service/pom.xml') != ''
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: goursi-ledger:ci
           format: table
