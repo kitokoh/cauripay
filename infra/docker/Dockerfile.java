@@ -15,7 +15,7 @@ RUN mvn -q -B clean package -DskipTests
 FROM eclipse-temurin:21-jre AS runtime
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=75"
 WORKDIR /app
-RUN groupadd -g 1000 goursi && useradd -u 1000 -g goursi -m goursi
+RUN groupadd -g 1001 goursi && useradd -u 1001 -g goursi -m goursi
 COPY --from=build /app/target/ledger-service-*.jar /app/ledger-service.jar
 USER goursi
 EXPOSE 3010
