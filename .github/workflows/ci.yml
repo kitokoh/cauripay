@@ -112,8 +112,11 @@ jobs:
         working-directory: services/ledger-service
         env:
           LEDGER_DATABASE_URL: jdbc:postgresql://localhost:5432/goursi_ledger
-          LEDGER_DATABASE_USER: goursi
-          LEDGER_DATABASE_PASSWORD: test
+          # Le plugin flyway-maven-plugin lit POSTGRES_USER/POSTGRES_PASSWORD
+          # (pom.xml) — les noms LEDGER_DATABASE_* n'étaient pas consommés
+          # (user 'null' → échec SCRAM).
+          POSTGRES_USER: goursi
+          POSTGRES_PASSWORD: test
           INTERNAL_SERVICE_KEY: ci_audit_key
         run: mvn -B -q flyway:migrate
       - name: Audit immutabilité (GOURSI-QA2)
